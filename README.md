@@ -1,6 +1,4 @@
-# CARIBOU
-
-**Carbon Allocation for Research trIps: Budget Optimization and Utilization**
+# Carbon Allocation for Research trIps: Budget Optimization and Utilization
 
 <p align="center"><img src="figures/logo_caribou.png" alt="CARIBOU logo" width="300"></p>
 
@@ -206,10 +204,3 @@ Large brackets mean that the two deterministic allocations used in the calibrati
 4. **Headcount approximation:** individual/team budgets use observed travelers rather than complete staff rosters, and the comparison is sensitive to this definition.
 5. **Governance assumptions:** sequential processing uses mission dates as a proxy for request dates; other families may rank an entire year's requests with retrospective knowledge. Family parameter ranges differ.
 6. **Expected outcomes:** results can reflect mixtures of two indivisible allocation scenarios; plot coordinates and calibrated budget values should not be mistaken for guaranteed annual allocations.
-7. **Discreteness:** severe-restriction indicators are thresholded and depend on the finite number of observed traveler-years. Step-like curves, particularly under mild reduction targets, should not be smoothed into apparent precision.
-
-The input workbook can contain pseudonymized person-level information. Keep raw inputs and unreviewed output files out of public repositories. The exported JSON reports omit original person identifiers but may still warrant review before sharing.
-
----
-
-**Reproducibility:** For comparable experiments, document the input workbook/version (or its exported SHA-256), the random seed, the number of sampled rules, and any departures from the default calibration and pooling grids. The four final figures are regenerated from the simulation JSON without rerunning the allocation model.
