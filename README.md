@@ -2,6 +2,8 @@
 
 **Carbon Allocation for Research trIps: Budget Optimization and Utilization**
 
+<p align="center"><img src="figures/logo_caribou.png" alt="CARIBOU logo" width="300"></p>
+
 CARIBOU explores how to allocate an annual carbon budget for research travel. Using historical mission requests, it compares **individual budgets, partially pooled budgets, and fully pooled team budgets** under a range of hypothetical governance rules and carbon-reduction targets.
 
 The aim is **decision support through sensitivity analysis**, not the identification of a universally optimal policy. The simulations investigate how many missions are refused and how restrictions are distributed among travelers when the expected carbon reduction is held constant.
