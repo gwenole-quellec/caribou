@@ -1,0 +1,47 @@
+# CARIBOU — local data, simulation outputs, and Python artifacts
+# =============================================================
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+*~
+
+# Local research-travel data (not for public distribution)
+*.xlsx
+*.xls
+*.xlsm
+
+# Generated simulation reports and scratch runs
+/results/
+/results-*/
+/smoke/
+/backup/
+*.log
+*.pid
+
+# Keep the four final figures available on GitHub.
+# Ignore other generated images/PDFs inside figures/.
+/figures/*
+!/figures/fig_missions.png
+!/figures/fig_missions.pdf
+!/figures/fig_restrictions.png
+!/figures/fig_restrictions.pdf
+!/figures/fig_governance.png
+!/figures/fig_governance.pdf
+!/figures/fig_tradeoff.png
+!/figures/fig_tradeoff.pdf
