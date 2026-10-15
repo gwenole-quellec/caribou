@@ -65,6 +65,15 @@ SMALL_POINT_SIZE = 19
 MARKER_SIZE = 89
 OUTPUT_STEM = Path(__file__).stem
 
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Latin Modern Roman", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+    "font.weight": "normal",
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+})
+
 
 # =============================================================================
 # Load and validate simulation data
@@ -248,26 +257,27 @@ def plot_tradeoff(
         fontsize=17, y=0.972,
     )
     fig.text(
-        0.5, 0.921,
-        "Benefits versus severe restrictions, relative to no pooling (λ = 0)",
-        ha="center", fontsize=10.8, color="#5E6670",
+        0.5, 0.915,
+        f"Benefits versus severe restrictions, relative to no pooling ($\\lambda = 0$)",
+        ha="center", fontsize=12, color="#5E6670",
     )
     fig.text(
         0.5, 0.870,
-        "Right preserves more trips · Down imposes fewer severe restrictions",
-        ha="center", fontsize=10, color="#5E6670",
+        "Right preserves more trips · Down imposes fewer severe restrictions · "
+        f"Medians of paired differences across {rule_count:,} sampled rules · ",
+        ha="center", fontsize=11, color="#5E6670",
     )
 
     # Color encodes the carbon target, as in figs 1–3.
     target_handles = [
         Line2D([0], [0], color=TARGET_COLORS[target], linewidth=2.8,
-               label=f"−{target}% CO₂")
+               label=f"$-{target}\\%\\,\\mathrm{{CO}}_2$")
         for target in TARGETS
     ]
     fig.legend(
         handles=target_handles, loc="upper center",
         bbox_to_anchor=(0.5, 0.845), ncol=4, frameon=False,
-        fontsize=10.5, columnspacing=2, handlelength=2.2,
+        fontsize=11.5, columnspacing=2, handlelength=2.2,
     )
 
     # Shape identifies the pooling fraction along each colored path.
@@ -285,13 +295,7 @@ def plot_tradeoff(
     fig.legend(
         handles=pooling_handles, loc="lower center",
         bbox_to_anchor=(0.5, 0.120), ncol=4, frameon=False,
-        fontsize=10, columnspacing=2, handletextpad=0.5,
-    )
-    fig.text(
-        0.5, 0.043,
-        f"Medians of paired differences across {rule_count:,} sampled rules · "
-        "Paths join summaries, not individual allocations",
-        ha="center", fontsize=9.1, color="#5E6670",
+        fontsize=11, columnspacing=2, handletextpad=0.5,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)

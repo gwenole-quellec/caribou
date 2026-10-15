@@ -1,18 +1,33 @@
-"""CARIBOU: compare governance families under pooled carbon budgets.
+"""
+CARIBOU: visualize how decision-rule families modify the burden of pooling.
 
-Four panels show the severity of travel restrictions at different carbon-reduction targets. Within
-each panel, the five decision-rule families are compared at pooling fractions of 20%, 50%, and 100%.
+This figure summarizes, for each governance family, how budget pooling changes
+the share of severely affected traveler-years relative to no pooling (lambda=0).
 
-Each point is the median share of active traveler-years in which at least half of the requested
-missions are refused. All values are absolute levels, not differences relative to an individual
-allocation (lambda = 0).
+Layout
+------
+Three heatmaps are shown side by side, corresponding to pooling fractions
+lambda = 0.20, 0.50, and 1.00.
+- Rows: decision-rule families.
+- Columns: carbon-reduction targets (5%, 10%, 15%, 20%).
 
-The sampled-rule distributions are sensitivity analyses, not representative probabilities of actual
-governance practices. Differences between families are descriptive; several rule parameters can vary
-at once.
+Each cell contains the median paired difference, across sampled rules in that
+family, between the severe-restriction rate at the displayed pooling fraction
+and the severe-restriction rate at lambda = 0 for the same sampled rule.
 
-Inputs:  budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
-Outputs: fig_governance.png and fig_governance.pdf (or this script's stem)
+Interpretation
+--------------
+Negative values indicate that pooling reduces severe restrictions relative to
+no pooling. Positive values indicate that pooling increases severe restrictions.
+
+Inputs
+------
+budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
+
+Outputs
+-------
+fig_governance.png
+fig_governance.pdf
 """
 
 from __future__ import annotations
@@ -23,7 +38,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.lines import Line2D
 
 
 # ==================================================================================================
@@ -31,9 +45,18 @@ from matplotlib.lines import Line2D
 # ==================================================================================================
 
 TARGETS = (5, 10, 15, 20)
-POOLING_LEVELS = (0.20, 0.50, 1.0)
+POOLING_LEVELS = (0.20, 0.50, 1.00)
+
 METRIC = "severely_affected_traveler_years_percent"
 SCHEMA_VERSION = "1.0"
+
+# Use the same carbon-target colors as the other CARIBOU figures.
+TARGET_COLORS = {
+    5: "#2676B8",      # Blue
+    10: "#159FAD",     # Teal
+    15: "#DF8836",     # Orange
+    20: "#CB4D4D",     # Red
+}
 
 FAMILIES = (
     "sequential",
@@ -44,46 +67,64 @@ FAMILIES = (
 )
 
 FAMILY_LABELS = {
-    "sequential": "First come, first served",
-    "cost": "Lowest-carbon trips first",
-    "distributive": "Shared fairly",
-    "longitudinal": "Compensate past restrictions",
-    "random": "Random allocation",
+    "sequential": "Decide as\n requests arrive",
+    "cost": "Prioritize\n by emissions",
+    "distributive": "Spread travel\n opportunities",
+    "longitudinal": "Compensate\n past restrictions",
+    "random": "Random\n priorities",
 }
 
-# Carbon-reduction colors match the other CARIBOU figures.
-TARGET_COLORS = {
-    5: "#2676B8",
-    10: "#159FAD",
-    15: "#DF8836",
-    20: "#CB4D4D",
+POOLING_LABELS = {
+    0.20: "20% pooled",
+    0.50: "50% pooled",
+    1.00: "100% pooled",
 }
 
-# Pooling fractions are encoded consistently across all four panels.
-POOLING_COLORS = {
-    0.20: "#219A92",  # Teal
-    0.50: "#E0A441",  # Amber
-    1.0: "#C95450",   # Red
-}
-
-# Small vertical offsets prevent identical values from hiding one another.
-POINT_OFFSETS = (-0.14, 0.0, 0.14)
-
-FIGURE_SIZE = (14.0, 8.9)
+FIGURE_SIZE = (12.8, 6.8)
 PNG_DPI = 300
-POINT_SIZE = 65
-CONNECTOR_COLOR = "#A4ABB1"
 OUTPUT_STEM = Path(__file__).stem
+
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Latin Modern Roman", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+    "font.weight": "normal",
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+})
 
 
 # ==================================================================================================
-# Load and validate simulation data
+# Utilities
 # ==================================================================================================
 
 def pooling_key(value: float) -> str:
     """Match the string representation of lambda used in CARIBOU JSON."""
     return format(float(value), ".10g")
 
+
+def pretty_target(target: int) -> str:
+    """Format a carbon-reduction target label."""
+    return f"$-{target}\\%$\n$\\mathrm{{CO}}_2$"
+
+
+def rounded_limit(values: np.ndarray) -> float:
+    """Return a readable symmetric color limit covering all values."""
+    maximum = float(np.max(np.abs(values)))
+
+    if maximum <= 1.0:
+        step = 0.25
+    elif maximum <= 2.0:
+        step = 0.5
+    else:
+        step = 1.0
+
+    return max(step, np.ceil(maximum / step) * step)
+
+
+# ==================================================================================================
+# Load and validate simulation data
+# ==================================================================================================
 
 def load_report(results_dir: Path, target: int) -> dict:
     """Read a simulation report and verify its relevant metadata."""
@@ -97,6 +138,7 @@ def load_report(results_dir: Path, target: int) -> dict:
 
     if report.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(f"Unsupported CARIBOU JSON schema in {path}")
+
     if not report.get("draws"):
         raise ValueError(f"No sampled decision rules in {path}")
 
@@ -106,65 +148,107 @@ def load_report(results_dir: Path, target: int) -> dict:
     ):
         raise ValueError(f"Carbon target does not match filename: {path}")
 
-    levels = np.asarray(report.get("pooling_fractions", []), dtype=float)
-    if not np.all(np.isfinite(levels)):
+    available_levels = np.asarray(report.get("pooling_fractions", []), dtype=float)
+    if not np.all(np.isfinite(available_levels)):
         raise ValueError(f"Invalid pooling fractions in {path}")
-    for level in POOLING_LEVELS:
-        if np.count_nonzero(np.isclose(levels, level)) != 1:
+
+    expected_levels = (0.0,) + POOLING_LEVELS
+    for level in expected_levels:
+        if np.count_nonzero(np.isclose(available_levels, level)) != 1:
             raise ValueError(f"Missing or duplicated λ={level:g} in {path}")
 
     return report
 
 
-def summarize_families(report: dict) -> tuple[np.ndarray, dict]:
-    """Compute medians by family and pooling fraction for one target."""
-    observations = {
+def paired_differences_by_family(report: dict) -> tuple[dict, dict]:
+    """
+    Compute paired differences by decision-rule family.
+
+    For each draw and each displayed pooling level, compute:
+        severe_restrictions(lambda) - severe_restrictions(lambda=0)
+
+    Returns
+    -------
+    differences:
+        Nested dict differences[family][level] -> list of paired differences.
+    counts:
+        Number of sampled rules per family.
+    """
+    differences = {
         family: {level: [] for level in POOLING_LEVELS}
         for family in FAMILIES
     }
 
     for draw in report["draws"]:
         family = draw["rule"]["family"]
-        if family not in observations:
+        if family not in differences:
             raise ValueError(f"Unexpected decision-rule family: {family}")
+
+        baseline = draw["by_lambda"][pooling_key(0.0)]["metrics"][METRIC]
+        if baseline is None or not np.isfinite(float(baseline)):
+            raise ValueError("Missing or invalid baseline metric at λ=0")
+
+        baseline = float(baseline)
 
         for level in POOLING_LEVELS:
             value = draw["by_lambda"][pooling_key(level)]["metrics"][METRIC]
             if value is None or not np.isfinite(float(value)):
-                raise ValueError("Missing or invalid severe-restriction metric")
-            if not 0 <= float(value) <= 100:
-                raise ValueError("Restriction percentage outside [0, 100]")
-            observations[family][level].append(float(value))
+                raise ValueError(f"Missing or invalid metric at λ={level:g}")
 
-    values = np.empty((len(FAMILIES), len(POOLING_LEVELS)))
-    counts = {}
+            difference = float(value) - baseline
+            differences[family][level].append(difference)
 
-    for i, family in enumerate(FAMILIES):
-        counts[family] = len(observations[family][POOLING_LEVELS[0]])
-        if counts[family] == 0:
+    counts = {
+        family: len(differences[family][POOLING_LEVELS[0]])
+        for family in FAMILIES
+    }
+
+    for family, count in counts.items():
+        if count == 0:
             raise ValueError(f"No sampled rules for family '{family}'")
-        for j, level in enumerate(POOLING_LEVELS):
-            values[i, j] = np.median(observations[family][level])
 
-    return values, counts
+    return differences, counts
 
 
 def load_governance(results_dir: Path) -> tuple[dict, int, float, dict]:
-    """Read reports one by one to avoid keeping all draws in memory."""
-    medians = {}
+    """
+    Load paired differences for all targets.
+
+    Returns
+    -------
+    medians:
+        medians[level] is a 2D array of shape (n_families, n_targets).
+    rule_count:
+        Number of sampled decision rules per target.
+    threshold:
+        Severe-restriction threshold used in the simulations.
+    family_counts:
+        Counts per family.
+    """
+    medians = {
+        level: np.empty((len(FAMILIES), len(TARGETS)))
+        for level in POOLING_LEVELS
+    }
+
     rule_counts = set()
     severity_thresholds = set()
     family_counts = None
 
-    for target in TARGETS:
+    for target_index, target in enumerate(TARGETS):
         report = load_report(results_dir, target)
-        values, counts = summarize_families(report)
-        medians[target] = values
+        differences, counts = paired_differences_by_family(report)
+
+        for family_index, family in enumerate(FAMILIES):
+            for level in POOLING_LEVELS:
+                medians[level][family_index, target_index] = np.median(
+                    differences[family][level]
+                )
 
         rule_counts.add(len(report["draws"]))
         severity_thresholds.add(
             float(report["experiment"]["severity_threshold"])
         )
+
         if family_counts is None:
             family_counts = counts
         elif counts != family_counts:
@@ -174,8 +258,9 @@ def load_governance(results_dir: Path) -> tuple[dict, int, float, dict]:
 
     if len(rule_counts) != 1:
         raise ValueError("Reports contain different numbers of sampled rules")
+
     if len(severity_thresholds) != 1:
-        raise ValueError("Inconsistent severity thresholds across reports")
+        raise ValueError("Inconsistent severity thresholds across targets")
 
     return medians, rule_counts.pop(), severity_thresholds.pop(), family_counts
 
@@ -184,6 +269,36 @@ def load_governance(results_dir: Path) -> tuple[dict, int, float, dict]:
 # Figure
 # ==================================================================================================
 
+def draw_cell_annotations(ax: plt.Axes, values: np.ndarray, limit: float) -> None:
+    """Annotate each heatmap cell with its median paired difference."""
+    for i in range(values.shape[0]):
+        for j in range(values.shape[1]):
+            value = values[i, j]
+
+            # Use white text on the darkest cells for readability.
+            text_color = "white" if abs(value) > 0.55 * limit else "#1F2933"
+
+            ax.text(
+                j,
+                i,
+                f"{value:+.1f}",
+                ha="center",
+                va="center",
+                fontsize=12,
+                color=text_color,
+            )
+
+
+def heatmap_center(axes: np.ndarray) -> float:
+    """Horizontal center of the THREE actual heatmap axes, not the colorbar.
+
+    Call this after adding the colorbar (which changes the axes positions).
+    """
+    left = min(ax.get_position().x0 for ax in axes)
+    right = max(ax.get_position().x1 for ax in axes)
+    return 0.5 * (left + right)
+
+
 def plot_governance(
     medians: dict,
     rule_count: int,
@@ -191,94 +306,91 @@ def plot_governance(
     family_counts: dict,
     output_dir: Path,
 ) -> None:
-    """Draw four aligned dot-and-line comparisons for decision makers."""
-    fig, axes = plt.subplots(2, 2, figsize=FIGURE_SIZE, sharex=True)
+    """Draw the decision-maker-friendly heatmap version of the governance figure."""
+    stacked = np.stack([medians[level] for level in POOLING_LEVELS], axis=0)
+    color_limit = rounded_limit(stacked)
+
+    fig, axes = plt.subplots(
+        1, len(POOLING_LEVELS),
+        figsize=FIGURE_SIZE,
+        sharey=True,
+    )
     fig.subplots_adjust(
-        left=0.215, right=0.980, top=0.865, bottom=0.215,
-        wspace=0.62, hspace=0.40,
+        left=0.245, right=0.92, top=0.82, bottom=0.19, wspace=0.10,
     )
 
-    # A common x-axis ensures that equal positions mean equal restriction rates.
-    maximum = max(float(np.max(values)) for values in medians.values())
-    upper = max(2.0, np.ceil(maximum / 2.0) * 2.0)
-    ticks = np.arange(0, upper + 0.001, 2.0)
-    rows = np.arange(len(FAMILIES))[::-1]
+    cmap = plt.get_cmap("RdBu_r")
 
-    for target, ax in zip(TARGETS, axes.flat):
-        values = medians[target]
-        color = TARGET_COLORS[target]
+    for ax, level in zip(axes, POOLING_LEVELS):
+        values = medians[level]
 
-        for i, row in enumerate(rows):
-            # The faint baseline separates families without a dense grid.
-            ax.axhline(row, color="#E1E5E9", linewidth=0.9, zorder=0)
+        image = ax.imshow(
+            values,
+            vmin=-color_limit,
+            vmax=color_limit,
+            cmap=cmap,
+            aspect="auto",
+        )
 
-            y = row + np.asarray(POINT_OFFSETS)
-            x = values[i]
-
-            # The connector indicates the same rule family at three levels.
-            ax.plot(
-                x, y, color=CONNECTOR_COLOR, linewidth=1.8,
-                solid_capstyle="round", zorder=2,
-            )
-
-            for j, level in enumerate(POOLING_LEVELS):
-                ax.scatter(
-                    x[j], y[j], s=POINT_SIZE,
-                    facecolor=POOLING_COLORS[level], edgecolor="white",
-                    linewidth=0.9, zorder=3,
-                )
+        draw_cell_annotations(ax, values, color_limit)
 
         ax.set_title(
-            f"−{target}% CO₂", color=color,
-            fontsize=14, fontweight="semibold", pad=10,
+            POOLING_LABELS[level],
+            fontsize=12,
+            pad=12,
         )
-        ax.set_yticks(rows)
-        ax.set_yticklabels(
-            [FAMILY_LABELS[family] for family in FAMILIES], fontsize=10,
-        )
-        ax.set_ylim(-0.55, len(FAMILIES) - 0.45)
-        ax.set_xlim(-0.20, upper + 0.35)
-        ax.set_xticks(ticks)
 
-        ax.grid(axis="x", color="#DEE3E7", linewidth=0.9)
-        ax.set_axisbelow(True)
-        ax.tick_params(axis="y", length=0, pad=8)
-        ax.tick_params(axis="x", labelsize=9)
-        for spine in ("top", "right", "left"):
-            ax.spines[spine].set_visible(False)
-        ax.spines["bottom"].set_color("#C8CFD5")
+        ax.set_xticks(range(len(TARGETS)))
+        ax.set_xticklabels(
+            [pretty_target(target) for target in TARGETS],
+            fontsize=12,
+        )
+        for label, target in zip(ax.get_xticklabels(), TARGETS):
+          label.set_color(TARGET_COLORS[target])
+          label.set_fontweight("bold")
+
+        ax.set_yticks(range(len(FAMILIES)))
+        ax.set_yticklabels(
+            [FAMILY_LABELS[family] for family in FAMILIES],
+            fontsize=12,
+        )
+
+        # Cell borders.
+        ax.set_xticks(np.arange(-0.5, len(TARGETS), 1), minor=True)
+        ax.set_yticks(np.arange(-0.5, len(FAMILIES), 1), minor=True)
+        ax.grid(which="minor", color="white", linewidth=1.4)
+        ax.tick_params(which="minor", bottom=False, left=False)
+        ax.tick_params(axis="both", length=0)
+
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+    colorbar = fig.colorbar(
+        image,
+        ax=axes,
+        fraction=0.035,
+        pad=0.02,
+    )
+    colorbar.set_label(
+        "Additional severely affected traveler-years per 100 active\n"
+        f"traveler-years (relative to no pooling, $\\lambda = 0$)",
+        fontsize=12,
+    )
+    colorbar.ax.tick_params(labelsize=9)
+
+    # Freeze layout before querying the axes positions. Use the actual span of
+    # the three heatmaps, EXCLUDING their y-axis labels and the colorbar.
+    fig.canvas.draw()
+    x_center = heatmap_center(axes)
 
     fig.suptitle(
-        "Does governance make pooling fairer?",
-        fontsize=17, y=0.968,
+        "How does governance change the burden of pooling?",
+        x=x_center, y=0.97, ha="center", fontsize=17,
     )
     fig.text(
-        0.5, 0.914,
-        "Severe travel restrictions across carbon-reduction targets",
-        ha="center", fontsize=11, color="#5E6670",
-    )
-    fig.text(
-        0.935, 0.914, "Left is better",
-        ha="right", fontsize=10, color="#5E6670",
-    )
-    fig.supxlabel(
-        "Traveler-years losing at least "
-        f"{threshold:.0%} of requested trips (per 100 active traveler-years)",
-        x=0.58, y=0.147, fontsize=11,
-    )
-
-    handles = [
-        Line2D(
-            [0], [0], marker="o", linestyle="",
-            markersize=9, markerfacecolor=POOLING_COLORS[level],
-            markeredgecolor="white", label=f"{level:.0%} pooled",
-        )
-        for level in POOLING_LEVELS
-    ]
-    fig.legend(
-        handles=handles, loc="lower center", ncol=3,
-        bbox_to_anchor=(0.5, 0.093), frameon=False,
-        fontsize=10, handletextpad=0.4, columnspacing=1.5,
+        x_center, 0.913,
+        "Median paired differences in severe travel restrictions",
+        ha="center", va="center", fontsize=12, color="#5E6670",
     )
 
     family_sizes = set(family_counts.values())
@@ -286,19 +398,20 @@ def plot_governance(
         f"{next(iter(family_sizes)):,} per family"
         if len(family_sizes) == 1 else "unequal family sample sizes"
     )
-    # Reading note complements the pooling legend without singling out a
-    # preferred governance rule: only severe restrictions are plotted here.
+
     fig.text(
-        0.5, 0.068,
-        "At higher CO₂ targets, fair sharing changes little with pooling; "
-        "carbon-cost and random rules show larger increases.",
-        ha="center", fontsize=9.2, color="#374151",
+        x_center, 0.075,
+        "Blue = fewer severe restrictions · Red = more "
+        "(relative to the same rule at $\\lambda=0$)",
+        ha="center", fontsize=11, color="#5E6670",
     )
+
     fig.text(
-        0.5, 0.031,
-        f"Medians within governance families · {rule_count:,} sampled rules "
-        f"({sampling_note}) · Points are vertically offset for readability only.",
-        ha="center", fontsize=9, color="#5E6670",
+        x_center, 0.048,
+        f"Severe = at least {threshold:.0%} of trips refused per traveler-year · "
+        f"Median paired differences across {rule_count:,} rules "
+        f"({sampling_note})",
+        ha="center", fontsize=11, color="#5E6670",
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -319,17 +432,29 @@ def plot_governance(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--results-dir", type=Path, default=Path("results"),
+        "--results-dir",
+        type=Path,
+        default=Path("results"),
         help="Directory containing CARIBOU JSON simulation reports",
     )
     parser.add_argument(
-        "--output-dir", type=Path, default=Path("figures"),
-        help="Directory for the PNG and PDF figures (default: figures)",
+        "--output-dir",
+        type=Path,
+        default=Path("figures"),
+        help="Directory for the PNG and PDF outputs (default: figures)",
     )
     args = parser.parse_args()
 
-    medians, rule_count, threshold, family_counts = load_governance(args.results_dir)
-    plot_governance(medians, rule_count, threshold, family_counts, args.output_dir)
+    medians, rule_count, threshold, family_counts = load_governance(
+        args.results_dir
+    )
+    plot_governance(
+        medians=medians,
+        rule_count=rule_count,
+        threshold=threshold,
+        family_counts=family_counts,
+        output_dir=args.output_dir,
+    )
 
 
 if __name__ == "__main__":

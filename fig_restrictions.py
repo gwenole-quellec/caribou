@@ -60,6 +60,15 @@ GRID_SIZE = 10
 FACE_RADIUS = 0.40
 OUTPUT_STEM = Path(__file__).stem
 
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Latin Modern Roman", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+    "font.weight": "normal",
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+})
+
 
 # ==================================================================================================
 # Load and validate simulation data
@@ -242,7 +251,7 @@ def draw_village(ax, shares: dict) -> None:
         f"No refusals: {shares['none']:.1f}%\n"
         f"Moderate: {shares['moderate']:.1f}%\n"
         f"Severe: {shares['severe']:.1f}%",
-        ha="center", va="top", fontsize=8.4, linespacing=1.22,
+        ha="center", va="top", fontsize=10, linespacing=1.22,
         color="#374151",
     )
 
@@ -274,16 +283,6 @@ def plot_restrictions(
         wspace=0.04, hspace=0.18,
     )
 
-    fig.suptitle(
-        "Who bears the travel restrictions?",
-        fontsize=17, y=0.97,
-    )
-    fig.text(
-        0.5, 0.926,
-        "Distribution per 100 active traveler-years",
-        ha="center", color="#5E6670", fontsize=11,
-    )
-
     for i, target in enumerate(TARGETS):
         for j, level in enumerate(POOLING_LEVELS):
             ax = axes[i, j]
@@ -291,20 +290,36 @@ def plot_restrictions(
 
             if i == 0:
                 ax.set_title(
-                    f"{level:.0%} pooled", pad=11, fontsize=11.3,
-                    color="#374151", fontweight="semibold",
+                    f"{level:.0%} pooled", pad=11, fontsize=11.5,
+                    color="#374151", fontweight="bold",
                 )
 
             if j == 0:
                 ax.text(
                     -0.18, 0.56,
-                    f"−{target}% CO₂",
+                    f"$-{target}\\%\\,\\mathrm{{CO}}_2$",
                     transform=ax.transAxes,
                     ha="right", va="center",
-                    fontsize=11.2, fontweight="semibold",
+                    fontsize=11.5, fontweight="bold",
                     color=TARGET_COLORS[target],
                     clip_on=False,
                 )
+
+    left = axes[0, 0].get_position().x0
+    right = axes[0, -1].get_position().x1
+    x_center = 0.5 * (left + right)
+
+    fig.suptitle(
+        "Who bears the travel restrictions?",
+        fontsize=17, x=x_center, y=0.97,
+    )
+    fig.text(
+        x_center, 0.915,
+        "Distribution per 100 active traveler-years · "
+        f"Medians across {rule_count:,} sampled decision rules\n"
+        "Faces rounded to whole traveler-year equivalents",
+        ha="center", color="#5E6670", fontsize=11,
+    )
 
     handles = [
         Line2D(
@@ -315,21 +330,15 @@ def plot_restrictions(
     ]
     labels = (
         "No refused missions",
-        f"Some refusals (<{severity_threshold:.0%})",
-        f"Severe restrictions (≥{severity_threshold:.0%})",
+        f"Some refusals ($< {100 * severity_threshold:.0f}\\%$)",
+        f"Severe restrictions ($\\geq {100 * severity_threshold:.0f}\\%$)",
     )
 
     fig.legend(
         handles, labels,
-        loc="lower center", bbox_to_anchor=(0.5, 0.068),
-        ncol=3, frameon=False, fontsize=10,
+        loc="lower center", bbox_to_anchor=(x_center, 0.068),
+        ncol=3, frameon=False, fontsize=11,
         columnspacing=1.5, handletextpad=0.5,
-    )
-    fig.text(
-        0.5, 0.029,
-        f"Medians across {rule_count:,} sampled decision rules · "
-        "Faces rounded to whole traveler-year equivalents",
-        ha="center", va="center", color="#5E6670", fontsize=9.2,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)

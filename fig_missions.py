@@ -49,6 +49,15 @@ POINT_SIZE = 39
 GUIDE_POOLING = (0.0, 0.20, 0.50, 1.0)
 OUTPUT_STEM = Path(__file__).stem
 
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Latin Modern Roman", "DejaVu Serif"],
+    "mathtext.fontset": "cm",
+    "font.weight": "normal",
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+})
+
 
 # ==================================================================================================
 # Load and validate simulation data
@@ -176,15 +185,15 @@ def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
 
         # Direct labeling is easier to read than a separate color legend.
         ax.annotate(
-            f"−{target}% CO₂", xy=(pooling[-1], median[-1]),
+            f"$-{target}\\%\\,\\mathrm{{CO}}_2$", xy=(pooling[-1], median[-1]),
             xytext=(11, 0), textcoords="offset points",
             va="center", ha="left", color=color,
-            fontsize=11, fontweight="semibold", clip_on=False,
+            fontsize=11.5, fontweight="bold", clip_on=False,
         )
 
     ax.set_title(
         "How many research trips can budget pooling preserve?",
-        fontsize=15, pad=15,
+        fontsize=17, pad=15,
     )
     ax.set_xlabel("Share of the annual carbon budget pooled", fontsize=12)
     ax.set_ylabel("Refused missions per 100 requested trips", fontsize=12)
@@ -201,7 +210,7 @@ def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
 
     ax.text(
         0.015, 0.98, "Lower is better",
-        transform=ax.transAxes, fontsize=10,
+        transform=ax.transAxes, fontsize=11,
         va="top", ha="left", color="#5E6670",
     )
     ax.text(
@@ -209,7 +218,7 @@ def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
         f"Median across {rule_count:,} sampled decision rules · "
         "shading: 25th–75th percentiles",
         transform=ax.transAxes, va="top", ha="center",
-        fontsize=9.5, color="#5E6670",
+        fontsize=11, color="#5E6670",
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)
