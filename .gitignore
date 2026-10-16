@@ -34,9 +34,11 @@ dist/
 *.log
 *.pid
 
-# Keep the four final figures available on GitHub.
+# Keep the final figures available on GitHub.
 # Ignore other generated images/PDFs inside figures/.
 /figures/*
+!/figures/fig_emissions_histogram.png
+!/figures/fig_emissions_histogram.pdf
 !/figures/fig_missions.png
 !/figures/fig_missions.pdf
 !/figures/fig_restrictions.png
@@ -46,3 +48,11 @@ dist/
 !/figures/fig_tradeoff.png
 !/figures/fig_tradeoff.pdf
 !/figures/logo_caribou.png
+
+# Keep the final tables available on GitHub.
+# Ignore other generated TEXs/markdowns inside tables/.
+/tables/*
+!/tables/table_dataset.md
+!/tables/table_dataset.tex
+!/tables/table_outcomes.md
+!/tables/table_outcomes.tex
