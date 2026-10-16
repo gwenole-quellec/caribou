@@ -1,24 +1,23 @@
-"""CARIBOU: summarize all four restriction metrics in one publication table.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-For each of the four expected carbon-reduction targets (5%, 10%, 15%, 20%), report each metric as:
+"""CARIBOU — summarize travel restrictions in a publication table.
 
-    median outcome at the requested pooling fraction (median paired change)
+Reports four restriction indicators for expected carbon-reduction targets of 5%, 10%, 15%, and 20%,
+at a selected pooling fraction.
 
-The paired change is calculated WITHIN each sampled rule, relative to lambda=0, BEFORE taking the
-median. Both summaries are in percentage units; the change is expressed in percentage points. A
-positive change means more restrictions.
+Each cell contains the median outcome and, in parentheses, the median paired change relative to no
+pooling (lambda=0). Paired differences are computed within each sampled rule before taking medians
+and are expressed in percentage points.
 
-These medians describe sensitivity to sampled hypothetical prioritization rules, not confidence
-intervals or estimated frequencies of real-world behaviors.
+Results characterize sensitivity to hypothetical prioritization behaviors, not probabilities of
+real-world decisions.
 
-Inputs:  results/budget_allocation_{5,10,15,20}pct.json (CARIBOU schema 1.0)
-Outputs: tables/table_outcomes.tex and tables/table_outcomes.md
+Inputs:  results/budget_allocation_{5,10,15,20}pct.json
+Outputs: tables/table_outcomes.tex, tables/table_outcomes.md
 
 Usage:
     python table_outcomes.py --results-dir results --lambda 0.5
-    python table_outcomes.py --results-dir results --lambda 0.2 --output-dir tables
-
-Requires: numpy (already used by the CARIBOU figure scripts).
 """
 
 from __future__ import annotations

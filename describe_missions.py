@@ -1,22 +1,22 @@
-"""CARIBOU — describe the observed eligible research-travel missions.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-Reads the SAME 'missions' worksheet and applies the SAME exclusions used by
-explore_budget_allocation.py (by default, accounting_team == ADMIN).
+"""CARIBOU — summarize eligible research-travel missions.
+
+Reads the 'missions' worksheet from carbon_analysis.xlsx, using the same eligibility criteria as
+explore_budget_allocation.py (ADMIN excluded by default).
 
 Outputs:
-  tables/table_dataset.tex            Publication-ready LaTeX table
-  tables/table_dataset.md             Readable Markdown summary
-  figures/fig_emissions_histogram.pdf Mission-level emissions histogram
-  figures/fig_emissions_histogram.png Same figure (300 dpi)
+  tables/table_dataset.tex             LaTeX descriptive table
+  tables/table_dataset.md              Markdown descriptive table
+  figures/fig_emissions_histogram.pdf  Mission-emissions histogram
+  figures/fig_emissions_histogram.png  Same histogram (300 dpi)
 
-The table presents annual and study-period totals. Travelers and research teams are counted uniquely
-within each year or across the full study period; therefore yearly traveler/team counts should NOT
-be added to obtain the total.
+Reports annual and overall statistics; distinct travelers and teams are counted separately for each
+period, so annual counts are not additive.
 
-Example:
+Usage:
   python describe_missions.py --input carbon_analysis.xlsx --exclude ADMIN
-
-Dependencies: numpy, pandas, matplotlib, openpyxl.
 """
 
 from __future__ import annotations

@@ -1,19 +1,20 @@
-"""CARIBOU: show who bears travel restrictions under carbon-budget pooling.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-Each small village contains 100 stylized traveler-year equivalents:
-    gray:    no missions refused;
-    amber:   at least one refusal, but fewer than half the missions refused;
-    red:     at least half of the missions refused.
+"""CARIBOU — visualize the distribution of travel restrictions.
 
-Rows represent carbon-reduction targets (5, 10, 15, 20%).
-Columns represent pooling fractions (0, 20, 50, 100%).
+For four carbon-reduction targets (rows) and four pooling fractions (columns), each pictogram
+represents 100 active traveler-year equivalents, divided into three categories:
+- gray:  no refused missions;
+- amber: some refusals, but fewer than half of requests lost;
+- red:   at least half of requested missions refused.
 
-The percentages are medians across sampled decision rules. The colored faces are rounded
-illustrations of those percentages, not 100 observed people. They summarize expected outcomes of
-separately calibrated lotteries.
+Shares are derived from median restriction indicators across sampled prioritization rules. The
+moderate share is calculated as the median affected share minus the median severely affected share.
 
-Inputs:  budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
-Outputs: fig_restrictions.png and fig_restrictions.pdf (or this script's stem)
+Pictograms are rounded representations of aggregate expected outcomes, not individual observed
+travelers. The sampled rules characterize sensitivity to hypothetical prioritization behaviors, not
+probabilities of real-world decisions.
 """
 
 from __future__ import annotations

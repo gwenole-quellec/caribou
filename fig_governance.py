@@ -1,33 +1,24 @@
-"""
-CARIBOU: visualize how decision-rule families modify the burden of pooling.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-This figure summarizes, for each governance family, how budget pooling changes
-the share of severely affected traveler-years relative to no pooling (lambda=0).
+"""CARIBOU — visualize how prioritization behaviors modify the burden of pooling.
 
-Layout
-------
-Three heatmaps are shown side by side, corresponding to pooling fractions
-lambda = 0.20, 0.50, and 1.00.
-- Rows: decision-rule families.
+This figure summarizes how budget pooling changes the share of severely affected traveler-years
+relative to no pooling (lambda=0), separately for each family of sampled prioritization behaviors.
+
+Three heatmaps are shown side by side, corresponding to pooling fractions lambda = 0.20, 0.50, and
+1.00.
+- Rows: prioritization families.
 - Columns: carbon-reduction targets (5%, 10%, 15%, 20%).
 
-Each cell contains the median paired difference, across sampled rules in that
-family, between the severe-restriction rate at the displayed pooling fraction
-and the severe-restriction rate at lambda = 0 for the same sampled rule.
+Each cell reports the median paired difference across sampled rules in the corresponding family:
+    severe restriction rate at the displayed lambda
+    minus
+    severe restriction rate at lambda = 0
+for the same sampled rule.
 
-Interpretation
---------------
-Negative values indicate that pooling reduces severe restrictions relative to
-no pooling. Positive values indicate that pooling increases severe restrictions.
-
-Inputs
-------
-budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
-
-Outputs
--------
-fig_governance.png
-fig_governance.pdf
+Negative values indicate fewer severely affected traveler-years under pooling.
+Positive values indicate more severely affected traveler-years under pooling.
 """
 
 from __future__ import annotations
@@ -384,7 +375,7 @@ def plot_governance(
     x_center = heatmap_center(axes)
 
     fig.suptitle(
-        "How does governance change the burden of pooling?",
+        "How does prioritization behavior affect pooling outcomes?",
         x=x_center, y=0.97, ha="center", fontsize=17,
     )
     fig.text(

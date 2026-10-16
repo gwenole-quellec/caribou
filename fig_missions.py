@@ -1,14 +1,16 @@
-"""CARIBOU: visualize how carbon-budget pooling affects mission refusals.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-For each carbon-reduction target, plot the median percentage of refused missions across sampled
-governance rules, with a 25th--75th percentile band. Each target has been calibrated separately to
-the same expected emissions reduction at every pooling fraction.
+"""CARIBOU — visualize mission refusals under carbon-budget pooling.
 
-The bands describe sensitivity to the sampled decision rules, NOT confidence intervals or a
-representative distribution of real-world decisions.
+For each carbon-reduction target, plot the median number of refused missions per 100 requests across
+sampled prioritization rules, with 25th–75th percentile bands.
 
-Inputs:  budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
-Outputs: fig_missions.png and fig_missions.pdf (or this script's stem)
+Each combination of sampled rule, pooling fraction, and reduction target is calibrated separately to
+the prescribed expected carbon reduction.
+
+Percentile bands characterize sensitivity to hypothetical prioritization behaviors, not confidence
+intervals or probabilities of real-world decisions.
 """
 
 from __future__ import annotations

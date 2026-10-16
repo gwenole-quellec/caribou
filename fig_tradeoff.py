@@ -1,24 +1,26 @@
-#!/usr/bin/env python3
-"""CARIBOU: visualize the benefits and costs of pooling carbon budgets.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-For each carbon-reduction target, plot how pooling affects two outcomes:
-    Horizontal: additional missions preserved per 100 requested missions.
-    Vertical:   additional severely affected traveler-years per 100 active
-                traveler-years.
+"""CARIBOU — visualize the trade-off between mission preservation and severe
+travel restrictions under budget pooling.
 
-Both quantities are differences relative to strictly individual budgets
-(lambda = 0), computed WITHIN each sampled decision rule before taking
-medians. Every target/lambda combination is separately calibrated to the
-same expected carbon reduction.
+For each carbon-reduction target, this figure shows how pooling changes two
+outcomes relative to strictly individual budgets (lambda=0):
+- horizontal axis: additional missions preserved per 100 requested missions;
+- vertical axis: additional severely affected traveler-years per
+  100 active traveler-years.
 
-The two coordinates are separate medians across sampled rules. Consequently,
-points and connecting lines are descriptive summaries: they need not
-correspond to a single feasible allocation, nor define a Pareto frontier.
-The sampled rule distribution is a sensitivity analysis, not a confidence
-interval or a probability distribution over actual governance practices.
+Both quantities are paired differences, computed within each sampled decision
+rule before taking medians across rules. Each combination of carbon-reduction
+target and pooling fraction is calibrated separately to the same expected
+carbon reduction.
 
-Inputs:  budget_allocation_{5,10,15,20}pct.json (simulation schema 1.0)
-Outputs: fig_tradeoff.png and fig_tradeoff.pdf (or this script's stem)
+The two coordinates are summarized independently. Consequently, plotted points
+and connecting lines are descriptive summaries: they do not necessarily
+correspond to a single feasible allocation and should not be interpreted as
+Pareto frontiers. The distribution across sampled rules is a sensitivity
+analysis, not a confidence interval or a probability distribution over
+real-world governance practices.
 """
 
 from __future__ import annotations

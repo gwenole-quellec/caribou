@@ -1,13 +1,19 @@
-"""CARIBOU: explore carbon-budget pooling for research travel.
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
 
-A single allocation model spans individual (lambda=0), hybrid (0<lambda<1), and team-pooled
-(lambda=1) budgets. Sampled decision rules are applied to the same observed missions and random
-priorities at every pooling level. The annual reference allowance B0 is calibrated separately for
-each pooling level, rule, and carbon-reduction target.
+"""CARIBOU — explore carbon-budget allocation for research travel.
 
-The simulations explore hypothetical governance, not behavioral probabilities. Carbon targets are
-matched *in expectation* using a lottery between two feasible, whole-mission allocations; consult
-the recorded calibration brackets.
+Simulates individual (lambda=0), hybrid (0<lambda<1), and fully pooled team budgets using observed
+research-travel missions. For each sampled prioritization rule, pooling fraction, and
+carbon-reduction target, the annual reference allowance B0 is calibrated separately.
+
+Five families of hypothetical decision-making behaviors are explored. Random effects are held fixed
+across pooling fractions where applicable. These simulations characterize sensitivity to behavioral
+assumptions, not probabilities of actual institutional decisions.
+
+Carbon-reduction targets apply to aggregate emissions across study years and are matched in
+expectation through a lottery between two feasible allocations of indivisible missions. Calibration
+diagnostics are recorded in the JSON outputs.
 """
 
 from __future__ import annotations
