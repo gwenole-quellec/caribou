@@ -4,6 +4,7 @@
 # Python caches and environments
 __pycache__/
 *.py[cod]
+*.ipynb
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
