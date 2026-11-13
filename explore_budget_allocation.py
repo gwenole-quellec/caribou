@@ -86,8 +86,8 @@ REQUIRED_COLUMNS = (
     "mission_id",
     "year",
     "person_id",
-    "accounting_team",
-    "original_team",
+    "team",
+    "mission_type",
     "start_date",
     "emissions_kg_co2e",
 )
@@ -167,25 +167,43 @@ class Missions:
 
 def load_missions(
     path: Path,
-    exclude: list[str],
+    exclude_mission_types: list[str],
     headcount: str,
 ) -> Missions:
-    """Read the 'missions' sheet and build annual individual/team groups.
+    """Read complete missions and construct annual individual/team allocation groups.
 
-    Team sizes count observed eligible travelers, NOT the full staff roster. Administrative
-    exclusions apply before computing budgets and baselines.
+    Rows with an empty team (including missing or whitespace-only values) are
+    always ignored. Mission types specified by the user are also excluded,
+    case-insensitively. Filtering precedes all validation and budget calculations.
+    Team headcounts use eligible travelers, not the full staff roster.
     """
     df = pd.read_excel(path, sheet_name="missions")
 
     missing = set(REQUIRED_COLUMNS) - set(df.columns)
     if missing:
         raise ValueError(f"Missing missions columns: {sorted(missing)}")
-    if df[list(REQUIRED_COLUMNS)].isna().any().any():
-        raise ValueError("Missing mandatory mission fields")
-    if df.mission_id.duplicated().any():
-        raise ValueError("Duplicated mission_id")
 
-    df = df.copy()
+    original_count = len(df)
+    team_names = df["team"].astype("string").fillna("").str.strip()
+    missing_team_mask = team_names.eq("")
+
+    excluded_types = {value.strip().casefold() for value in exclude_mission_types}
+    excluded_types.discard("")
+    types = df["mission_type"].astype("string").fillna("").str.strip().str.casefold()
+    # Count each excluded mission once: missing team takes precedence.
+    excluded_type_mask = (~missing_team_mask) & types.isin(excluded_types)
+    eligible_mask = ~(missing_team_mask | excluded_type_mask)
+
+    df = df.loc[eligible_mask].copy()
+    df["team"] = team_names.loc[eligible_mask]
+
+    if df.empty:
+        raise ValueError("No eligible missions after filtering empty teams and mission types")
+    if df[list(REQUIRED_COLUMNS)].isna().any().any():
+        raise ValueError("Missing mandatory mission fields among eligible missions")
+    if df.mission_id.duplicated().any():
+        raise ValueError("Duplicated mission_id among eligible missions")
+
     df["start_date"] = pd.to_datetime(df.start_date, errors="raise")
     df["year"] = pd.to_numeric(df.year, errors="raise").astype(int)
     df["emissions_kg_co2e"] = pd.to_numeric(
@@ -199,21 +217,12 @@ def load_missions(
     ).any():
         raise ValueError("Emissions must be finite and nonnegative")
 
-    excluded = {name.strip().casefold() for name in exclude}
-    excluded_mask = (
-        df.accounting_team.astype(str).str.strip().str.casefold().isin(excluded)
-    )
-    original_count = len(df)
-    df = (
-        df.loc[~excluded_mask]
-        .sort_values(["year", "start_date", "mission_id"])
-        .reset_index(drop=True)
-    )
-    if df.empty or df.emissions_kg_co2e.sum() <= 0:
+    df = df.sort_values(["year", "start_date", "mission_id"]).reset_index(drop=True)
+    if df.emissions_kg_co2e.sum() <= 0:
         raise ValueError("No positive-emission eligible missions")
 
     person, _ = pd.factorize(df.person_id.astype(str), sort=True)
-    team, _ = pd.factorize(df.original_team.astype(str), sort=True)
+    team, _ = pd.factorize(df.team.astype(str), sort=True)
     year = df.year.to_numpy(dtype=int)
     cost = df.emissions_kg_co2e.to_numpy(dtype=float)
 
@@ -250,14 +259,16 @@ def load_missions(
 
     metadata = {
         "missions_original": original_count,
-        "missions_excluded": int(excluded_mask.sum()),
+        "missions_excluded": int((~eligible_mask).sum()),
+        "missions_excluded_no_team": int(missing_team_mask.sum()),
+        "missions_excluded_mission_type": int(excluded_type_mask.sum()),
         "missions_included": len(df),
         "travelers": len(set(person)),
         "active_traveler_years": len(pairs),
         "years": years,
         "baseline_kg_co2e": float(cost.sum()),
         "headcount": headcount,
-        "excluded_accounting_teams": exclude,
+        "excluded_mission_types": sorted(excluded_types),
         "input_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
 
@@ -277,7 +288,6 @@ def load_missions(
         total=float(cost.sum()),
         metadata=metadata,
     )
-
 
 # ==================================================================================================
 # Sampling decision rules
@@ -952,7 +962,7 @@ def run(args: argparse.Namespace) -> list[Path]:
     if len(set(args.targets)) != len(args.targets):
         raise ValueError("carbon targets must be unique")
 
-    data = load_missions(args.input, args.exclude, args.headcount)
+    data = load_missions(args.input, args.exclude_mission_types, args.headcount)
     rng = np.random.default_rng(args.seed)
     rules = sample_rules(args.draws, rng, args.sampling)
 
@@ -1044,7 +1054,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Input workbook (e.g. carbon_analysis.xlsx), sheet 'missions'",
     )
     parser.add_argument("--output-dir", type=Path, default=Path("results"))
-    parser.add_argument("--exclude", nargs="*", default=["ADMIN"])
+    parser.add_argument(
+        "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
+        help="Mission types to exclude (case-insensitive); missions without a team are always excluded",
+    )
     parser.add_argument(
         "--targets", type=float, nargs="+", default=list(DEFAULT_TARGETS)
     )

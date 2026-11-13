@@ -134,9 +134,13 @@ def check_coords(coords: object) -> bool:
 
 
 def geocode(city: str, country: str, user_agent: str) -> list[float] | None:
-    query = urlencode({"city": city, "country": country, "format": "jsonv2", "limit": 1})
+    query = urlencode(
+        {"city": city, "country": country, "format": "jsonv2", "limit": 1}
+    )
     url = "https://nominatim.openstreetmap.org/search?" + query
-    request = Request(url, headers={"User-Agent": user_agent, "Accept": "application/json"})
+    request = Request(
+        url, headers={"User-Agent": user_agent, "Accept": "application/json"}
+    )
     with urlopen(request, timeout=20) as response:
         payload = json.load(response)
     if not payload:
@@ -168,7 +172,9 @@ def save_cache(path: Path, cache: dict[str, list[float]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(
-        json.dumps(cache, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(
+            cache, ensure_ascii=False, indent=2, sort_keys=True
+        ) + "\n", encoding="utf-8"
     )
     temporary.replace(path)
 
@@ -271,9 +277,15 @@ def resolve_paths(
     if source.suffix.lower() != ".xlsx" or not source.is_file():
         parser.error("Input must be an existing .xlsx workbook")
 
-    output = (args.output or source.with_name(source.stem + "_carbon.xlsx")).expanduser().resolve()
-    errors_path = (args.errors or source.with_name(source.stem + "_carbon_errors.csv")).expanduser().resolve()
-    cache_path = (args.cache or source.with_name(source.stem + "_geocode_cache.json")).expanduser().resolve()
+    output = (
+        args.output or source.with_name(source.stem + "_carbon.xlsx")
+    ).expanduser().resolve()
+    errors_path = (
+        args.errors or source.with_name(source.stem + "_carbon_errors.csv")
+    ).expanduser().resolve()
+    cache_path = (
+        args.cache or source.with_name(source.stem + "_geocode_cache.json")
+    ).expanduser().resolve()
     if len({source, output, errors_path, cache_path}) != 4:
         parser.error("Input, output, error report and cache paths must all be different")
     return source, output, errors_path, cache_path
@@ -450,22 +462,55 @@ def create_parser() -> argparse.ArgumentParser:
         description="Add a 'carbon footprint' (kg CO2e) column to one Excel worksheet, one one-way leg per row.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("input", type=Path, help="Source .xlsx file (never overwritten)")
-    parser.add_argument("--sheet", help="Worksheet name (default: first worksheet)")
-    parser.add_argument("--origin-city-column", required=True, help="Origin city header")
-    parser.add_argument("--origin-country-column", required=True, help="Origin country header")
-    parser.add_argument("--destination-city-column", required=True, help="Destination city header")
-    parser.add_argument("--destination-country-column", required=True, help="Destination country header")
-    parser.add_argument("--mode-column", required=True, help="Transport mode header")
+    parser.add_argument(
+        "input", type=Path,
+        help="Source .xlsx file (never overwritten)"
+    )
+    parser.add_argument(
+        "--sheet",
+        help="Worksheet name (default: first worksheet)"
+    )
+    parser.add_argument(
+        "--origin-city-column", required=True,
+        help="Origin city header"
+    )
+    parser.add_argument(
+        "--origin-country-column", required=True,
+        help="Origin country header"
+    )
+    parser.add_argument(
+        "--destination-city-column", required=True,
+        help="Destination city header"
+    )
+    parser.add_argument(
+        "--destination-country-column", required=True,
+        help="Destination country header"
+    )
+    parser.add_argument(
+        "--mode-column", required=True,
+        help="Transport mode header"
+    )
     for name in ("plane", "train", "car", "taxi", "bus"):
         parser.add_argument(
             f"--{name}-values", nargs="+", default=DEFAULT_ALIASES[name], metavar="ALIAS",
             help=f"Recognized source labels for {name}. Quote multi-word labels. Replaces default aliases.",
         )
-    parser.add_argument("--output", type=Path, help="Output workbook (default: INPUT_carbon.xlsx)")
-    parser.add_argument("--errors", type=Path, help="CSV error report (default: INPUT_carbon_errors.csv)")
-    parser.add_argument("--cache", type=Path, help="JSON geocoding cache (default: INPUT_geocode_cache.json)")
-    parser.add_argument("--offline", action="store_true", help="Use cached coordinates only; do not call Nominatim")
+    parser.add_argument(
+        "--output", type=Path,
+        help="Output workbook (default: INPUT_carbon.xlsx)"
+    )
+    parser.add_argument(
+        "--errors", type=Path,
+        help="CSV error report (default: INPUT_carbon_errors.csv)"
+    )
+    parser.add_argument(
+        "--cache", type=Path,
+        help="JSON geocoding cache (default: INPUT_geocode_cache.json)"
+    )
+    parser.add_argument(
+        "--offline", action="store_true",
+        help="Use cached coordinates only; do not call Nominatim"
+    )
     parser.add_argument(
         "--user-agent", default="CARIBOU-carbon-footprint-cli/1.0 (academic research)",
         help="Identifiable HTTP User-Agent for Nominatim; include your contact email for production use",
@@ -497,8 +542,9 @@ def main(argv: list[str] | None = None) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     workbook.save(output)
     write_error_report(errors_path, issues)
-    print_summary(worksheet.title, len(legs), calculated, issues, reasons, output, errors_path,
-                  cache_path)
+    print_summary(
+        worksheet.title, len(legs), calculated, issues, reasons, output, errors_path, cache_path
+    )
     return 2 if issues else 0
 
 

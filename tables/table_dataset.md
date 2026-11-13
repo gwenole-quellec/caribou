@@ -1,6 +1,6 @@
 # CARIBOU — descriptive travel statistics
 
-Eligible missions after excluding 79 mission(s) in excluded accounting categories.
+Eligible missions after excluding 79 mission(s).
 
 | Year | Missions | Travelers | Teams | Emissions (t CO₂e) | Median mission emissions (IQR), kg CO₂e |
 | :--- | ---: | ---: | ---: | ---: | ---: |
@@ -12,4 +12,4 @@ Eligible missions after excluding 79 mission(s) in excluded accounting categorie
 
 Active traveler-years: **230**.
 The total counts unique travelers and research teams across all years; annual traveler and team counts should not be summed.
-Teams are identified using `original_team`; emissions are complete-mission totals in `emissions_kg_co2e`.
+Teams are identified using `team`; emissions are complete-mission totals in `emissions_kg_co2e`.

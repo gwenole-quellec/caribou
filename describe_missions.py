@@ -3,8 +3,9 @@
 
 """CARIBOU — summarize eligible research-travel missions.
 
-Reads the 'missions' worksheet from carbon_analysis.xlsx, using the same eligibility criteria as
-explore_budget_allocation.py (ADMIN excluded by default).
+Reads the 'missions' worksheet from carbon_footprint.xlsx, using the same eligibility criteria as
+explore_budget_allocation.py: missions without a team are always ignored, and specified mission types
+are excluded. No mission type is excluded by default.
 
 Outputs:
   tables/table_dataset.tex             LaTeX descriptive table
@@ -16,7 +17,8 @@ Reports annual and overall statistics; distinct travelers and teams are counted 
 period, so annual counts are not additive.
 
 Usage:
-  python describe_missions.py --input carbon_analysis.xlsx --exclude ADMIN
+  python describe_missions.py --input carbon_footprint.xlsx \
+      --exclude-mission-types research_administration
 """
 
 from __future__ import annotations
@@ -36,7 +38,7 @@ from matplotlib.ticker import MaxNLocator
 # ==================================================================================================
 
 REQUIRED_COLUMNS = (
-    "mission_id", "year", "person_id", "accounting_team", "original_team", "start_date",
+    "mission_id", "year", "person_id", "team", "mission_type", "start_date",
     "emissions_kg_co2e",
 )
 
@@ -62,8 +64,14 @@ plt.rcParams.update({
 # Utilities
 # ==================================================================================================
 
-def load_eligible_missions(path: Path, excluded_teams: list[str]) -> tuple[pd.DataFrame, int]:
-    """Match the simulation's input validation and ADMIN filtering."""
+def load_eligible_missions(
+    path: Path, excluded_mission_types: list[str]
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Use exactly the simulation's team and mission-type eligibility filtering.
+
+    Filtering precedes validation. Count each excluded mission once, giving
+    missing teams precedence when a row also matches an excluded mission type.
+    """
     if not path.is_file():
         raise FileNotFoundError(f"Input workbook not found: {path}")
     df = pd.read_excel(path, sheet_name="missions")
@@ -71,12 +79,32 @@ def load_eligible_missions(path: Path, excluded_teams: list[str]) -> tuple[pd.Da
     missing = sorted(set(REQUIRED_COLUMNS) - set(df.columns))
     if missing:
         raise ValueError(f"Missing columns in 'missions': {missing}")
-    if df[list(REQUIRED_COLUMNS)].isna().any().any():
-        raise ValueError("Missing values in required mission fields")
-    if df["mission_id"].duplicated().any():
-        raise ValueError("Duplicate mission_id values")
 
-    df = df.copy()
+    original_count = len(df)
+    team_names = df["team"].astype("string").fillna("").str.strip()
+    missing_team_mask = team_names.eq("")
+
+    excluded_types = {value.strip().casefold() for value in excluded_mission_types}
+    excluded_types.discard("")
+    types = df["mission_type"].astype("string").fillna("").str.strip().str.casefold()
+    excluded_type_mask = (~missing_team_mask) & types.isin(excluded_types)
+    eligible_mask = ~(missing_team_mask | excluded_type_mask)
+
+    exclusions = {
+        "total": int((~eligible_mask).sum()),
+        "no_team": int(missing_team_mask.sum()),
+        "mission_type": int(excluded_type_mask.sum()),
+    }
+    df = df.loc[eligible_mask].copy()
+    df["team"] = team_names.loc[eligible_mask]
+
+    if df.empty:
+        raise ValueError("No eligible missions after filtering empty teams and mission types")
+    if df[list(REQUIRED_COLUMNS)].isna().any().any():
+        raise ValueError("Missing mandatory mission fields among eligible missions")
+    if df["mission_id"].duplicated().any():
+        raise ValueError("Duplicated mission_id among eligible missions")
+
     df["year"] = pd.to_numeric(df["year"], errors="raise")
     if not np.isfinite(df["year"]).all() or (df["year"] % 1 != 0).any():
         raise ValueError("Mission years must be integers")
@@ -90,16 +118,11 @@ def load_eligible_missions(path: Path, excluded_teams: list[str]) -> tuple[pd.Da
     costs = df["emissions_kg_co2e"].to_numpy(dtype=float)
     if not np.isfinite(costs).all() or (costs < 0).any():
         raise ValueError("Mission emissions must be finite and nonnegative")
-
-    excluded = {value.strip().casefold() for value in excluded_teams}
-    excluded_mask = (
-        df["accounting_team"].astype(str).str.strip().str.casefold().isin(excluded)
-    )
-    n_excluded = int(excluded_mask.sum())
-    df = df.loc[~excluded_mask].copy()
-    if df.empty or df["emissions_kg_co2e"].sum() <= 0:
+    if costs.sum() <= 0:
         raise ValueError("No eligible missions with positive total emissions")
-    return df, n_excluded
+
+    assert exclusions["total"] + len(df) == original_count
+    return df, exclusions
 
 
 # ==================================================================================================
@@ -123,7 +146,7 @@ def summarize(df: pd.DataFrame, period: str) -> dict:
         "period": period,
         "missions": int(len(df)),
         "travelers": int(df["person_id"].astype(str).nunique()),
-        "teams": int(df["original_team"].astype(str).nunique()),
+        "teams": int(df["team"].astype(str).nunique()),
         "emissions_t": float(costs.sum() / 1000),
         "median_kg": float(q50),
         "q25_kg": float(q25),
@@ -131,7 +154,7 @@ def summarize(df: pd.DataFrame, period: str) -> dict:
     }
 
 
-def latex_table(rows: list[dict], traveler_years: int, n_excluded: int) -> str:
+def latex_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int]) -> str:
     """Standalone LaTeX table, usable via an input command."""
     years = [int(row["period"]) for row in rows if row["period"] != "Total"]
     years_str = (
@@ -139,7 +162,7 @@ def latex_table(rows: list[dict], traveler_years: int, n_excluded: int) -> str:
     )
     caption = (
         r"\textbf{Characteristics of the observed research travel.} "
-        rf"Eligible missions from {years_str}, excluding {n_excluded:,} "
+        rf"Eligible missions from {years_str}, excluding {exclusions['total']:,} "
         r"missions assigned to excluded accounting categories. "
         r"The total row counts distinct travelers and research teams across the full period "
         r"(not sums of annual counts). "
@@ -178,11 +201,10 @@ def latex_table(rows: list[dict], traveler_years: int, n_excluded: int) -> str:
     return "\n".join(out)
 
 
-def markdown_table(rows: list[dict], traveler_years: int, n_excluded: int) -> str:
+def markdown_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int]) -> str:
     lines = [
         "# CARIBOU — descriptive travel statistics", "",
-        f"Eligible missions after excluding {n_excluded:,} mission(s) in excluded "
-        "accounting categories.", "",
+        f"Eligible missions after excluding {exclusions['total']:,} mission(s).", "",
         "| Year | Missions | Travelers | Teams | Emissions (t CO₂e) | "
         "Median mission emissions (IQR), kg CO₂e |",
         "| :--- | ---: | ---: | ---: | ---: | ---: |",
@@ -200,7 +222,7 @@ def markdown_table(rows: list[dict], traveler_years: int, n_excluded: int) -> st
         "", f"Active traveler-years: **{traveler_years:,}**.",
         "The total counts unique travelers and research teams across all years; "
         "annual traveler and team counts should not be summed.",
-        "Teams are identified using `original_team`; emissions are complete-mission totals in "
+        "Teams are identified using `team`; emissions are complete-mission totals in "
         "`emissions_kg_co2e`.", "",
     ])
     return "\n".join(lines)
@@ -278,12 +300,12 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--input", type=Path, default=Path("carbon_analysis.xlsx"),
+        "--input", type=Path, default=Path("carbon_footprint.xlsx"),
         help="Input workbook with a 'missions' worksheet",
     )
     parser.add_argument(
-        "--exclude", nargs="*", default=["ADMIN"], metavar="TEAM",
-        help="Accounting teams excluded from the eligible mission baseline",
+        "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
+        help="Mission types to exclude (case-insensitive); missions without a team are always excluded",
     )
     parser.add_argument(
         "--table-dir", type=Path, default=Path("tables"),
@@ -302,16 +324,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    df, n_excluded = load_eligible_missions(args.input, args.exclude)
+    df, exclusions = load_eligible_missions(args.input, args.exclude_mission_types)
     rows, n_traveler_years = calculate_summary(df)
 
     args.table_dir.mkdir(parents=True, exist_ok=True)
     table_stem = args.table_dir / TABLE_FILENAME
     table_stem.with_suffix(".tex").write_text(
-        latex_table(rows, n_traveler_years, n_excluded), encoding="utf-8"
+        latex_table(rows, n_traveler_years, exclusions), encoding="utf-8"
     )
     table_stem.with_suffix(".md").write_text(
-        markdown_table(rows, n_traveler_years, n_excluded), encoding="utf-8"
+        markdown_table(rows, n_traveler_years, exclusions), encoding="utf-8"
     )
     plot_histogram(
         df["emissions_kg_co2e"].to_numpy(dtype=float),
@@ -325,7 +347,9 @@ def main() -> None:
         f"teams: {total['teams']:,}; "
         f"traveler-years: {n_traveler_years:,}; "
         f"baseline: {total['emissions_t']:,.3f} t CO2e "
-        f"(excluded {n_excluded:,} mission(s))."
+        f"(excluded {exclusions['total']:,}: "
+        f"{exclusions['no_team']:,} without a team, "
+        f"{exclusions['mission_type']:,} by mission type)."
     )
     for suffix in (".tex", ".md"):
         print(f"Created: {table_stem.with_suffix(suffix)}")
