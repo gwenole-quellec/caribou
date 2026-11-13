@@ -79,8 +79,6 @@ For a shorter technical test, reduce `--draws` (e.g., `--draws 100`) and use a s
 
 The dataset table summarizes eligible missions, distinct travelers, teams, and emissions by year and overall; its histogram shows emissions per eligible mission. The outcomes table reports all four restriction indicators at the selected pooling fraction, with median **within-rule paired changes** relative to no pooling. Its default is `--lambda 0.5`.
 
-The `.tex` tables are ready for `\input{tables/table_dataset.tex}` and `\input{tables/table_outcomes.tex}`; the manuscript must load `booktabs`. PDF figures can be included with `\includegraphics`.
-
 ## Simulation settings and interpretation
 
 - **Pooling:** `λ = 0, 0.1, …, 1`, from individual to fully pooled team budgets.
