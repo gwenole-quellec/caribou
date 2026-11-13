@@ -39,10 +39,10 @@ OUTPUT_STEM = Path(__file__).stem
 
 # Keep column order aligned with the four outcomes defined in the manuscript.
 METRICS = (
-    ("refused_missions_percent", "Refused missions", "Y_1"),
-    ("affected_traveler_years_percent", "Affected traveler-years", "Y_2"),
-    ("severely_affected_traveler_years_percent", "Severely affected traveler-years", "Y_3"),
-    ("repeatedly_affected_travelers_percent", "Repeatedly affected travelers", "Y_4"),
+    ("refused_missions_percent", "Refused missions", "O_{\\mathrm{miss}}"),
+    ("affected_traveler_years_percent", "Affected traveler-years", "O_{\\mathrm{aff}}"),
+    ("severely_affected_traveler_years_percent", "Severely affected traveler-years", "O_{\\mathrm{sev}}"),
+    ("repeatedly_affected_travelers_percent", "Repeatedly affected travelers", "O_{\\mathrm{rep}}"),
 )
 
 
@@ -190,10 +190,10 @@ def latex_table(
     pooling_pct = f"{100 * pooling:g}\\%"
     threshold_pct = f"{100 * threshold:g}\\%"
     headers = (
-        r"\shortstack{Refused\\missions\\($Y_1$)}",
-        r"\shortstack{Affected\\traveler-years\\($Y_2$)}",
-        r"\shortstack{Severely affected\\traveler-years\\($Y_3$)}",
-        r"\shortstack{Repeatedly affected\\travelers\\($Y_4$)}",
+        r"\shortstack{Refused\\missions\\($O_{\mathrm{miss}}$)}",
+        r"\shortstack{Affected\\traveler-years\\($O_{\mathrm{aff}}$)}",
+        r"\shortstack{Severely affected\\traveler-years\\($O_{\mathrm{sev}}$)}",
+        r"\shortstack{Repeatedly affected\\travelers\\($O_{\mathrm{rep}}$)}",
     )
     # Entries for all Y's represent restriction rates: positive delta = worse.
     caption = (
