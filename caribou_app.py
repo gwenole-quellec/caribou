@@ -130,7 +130,7 @@ with export_tab:
         st.download_button(
             "Download missions workbook",
             export_workbook(missions),
-            file_name="caribou_missions.xlsx",
+            file_name="carbon_footprint.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 with viz_tab:

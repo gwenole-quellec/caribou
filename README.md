@@ -35,7 +35,7 @@ In the Streamlit app, upload the consolidated `.xlsx`, select its worksheet and 
 
 If several rows represent segments of the same mission, enable **Group segments by mission_id**: emissions are summed and the earliest date is retained; traveler, team, mission type and year must match. Otherwise, mission IDs must be unique. Rows without a team are ignored, with a warning.
 
-Resolve validation errors, then download `caribou_missions.xlsx` and use it as the simulation input. The **Visualizations** tab explores the prepared data. This mode does not estimate emissions.
+Resolve validation errors, then download `carbon_footprint.xlsx` and use it as the simulation input. The **Visualizations** tab explores the prepared data. This mode does not estimate emissions.
 
 ### Full mode: estimate emissions from travel segments
 
