@@ -4,35 +4,72 @@
 
 CARIBOU is a Python workflow for exploring how individual and pooled carbon budgets affect research travel. It replays historical mission requests under hypothetical prioritization behaviors and compares mission preservation and the distribution of restrictions at common carbon-reduction targets. The purpose is **sensitivity analysis and decision support**, not to prescribe an optimal policy.
 
-## Requirements
+## Installation
 
-Python 3.10+ with:
+Requires Python 3.10+. From the repository root:
 
 ```bash
-python -m pip install numpy pandas scipy numba matplotlib openpyxl
+pip install -r requirements-ui.txt
+streamlit run caribou_app.py
 ```
 
-## Input workbook
+For command-line use only, install `requirements.txt` instead.
 
-The input workbook, e.g., `carbon_footprint.xlsx`, must contain a worksheet named `missions`, with **one row per complete mission**. Each mission must have a unique identifier and may comprise multiple travel segments and transportation modes. Its carbon footprint must represent the total estimated emissions of all segments.
+## Prepare the data
 
-The following columns are required:
+The simulator expects an Excel worksheet named `missions`, with **one row per complete mission** and these columns:
 
-| Column | Description |
+| Column | Expected value |
 |---|---|
-| `mission_id` | Unique identifier for each mission, across all years and travelers. |
-| `year` | Calendar year of the mission (e.g., `2025`). Used to define annual carbon budgets. |
-| `person_id` | Stable identifier for the traveler. The same individual must retain the same identifier across years to enable longitudinal analyses. |
-| `team` | Research team to which the traveler belongs. Used to define the groups within which carbon allowances are pooled. |
-| `mission_type` | User-defined category describing the purpose of the mission (e.g., `research`, `teaching`, `research_administration`). One or more types can be excluded using `--exclude-mission-types`. |
-| `start_date` | Mission departure date, stored as an Excel date or a parseable date value. Used to order missions in chronological allocation scenarios. |
-| `emissions_kg_co2e` | Total estimated greenhouse gas emissions of the complete mission, expressed in kg CO₂e. Must be a finite, non-negative numerical value. |
+| `mission_id` | Unique mission identifier across all travelers and years. |
+| `year` | Departure year, matching `start_date`. |
+| `person_id` | Traveler identifier, stable across years. |
+| `team` | Research team; rows without a team are ignored. |
+| `mission_type` | Mission purpose, e.g., `research` or `teaching`. |
+| `start_date` | Departure date, as an Excel date or parseable text. |
+| `emissions_kg_co2e` | Total emissions of all mission segments, in kg CO₂e; finite and nonnegative. |
 
-Multiple missions by the same traveler are represented by separate rows, sharing the same `person_id` but having distinct `mission_id` values. All travel segments belonging to a mission must be aggregated beforehand, and emissions must already be calculated, e.g., using the `carbon_footprint.py` script described below; The simulation does not perform geocoding or estimate transport emissions.
+Store identifiers as text to preserve leading zeros. Team sizes count travelers with eligible missions, not complete personnel rosters. Mission types can be excluded at simulation time with `--exclude-mission-types`.
 
-Missions with a missing team are ignored. Additional mission types can be excluded using --exclude-mission-types (e.g., research_administration). Team sizes are based on travelers with eligible requests rather than complete personnel rosters.
+### Simple mode: emissions already available
 
-**The workbook used in this study is not included in the public repository** because it contains confidential institutional travel records.
+In the Streamlit app, upload the consolidated `.xlsx`, select its worksheet and map the columns. If `year` is unmapped, it is derived from `start_date`. Select the source emissions unit and the interpretation of ambiguous text dates.
+
+If several rows represent segments of the same mission, enable **Group segments by mission_id**: emissions are summed and the earliest date is retained; traveler, team, mission type and year must match. Otherwise, mission IDs must be unique. Rows without a team are ignored, with a warning.
+
+Resolve validation errors, then download `caribou_missions.xlsx` and use it as the simulation input. The **Visualizations** tab explores the prepared data. This mode does not estimate emissions.
+
+### Full mode: estimate emissions from travel segments
+
+If emissions are unavailable, first run `carbon_footprint.py` on a workbook containing origin/destination cities and countries and transport modes. It estimates segment emissions from geographic distances and transport-specific factors adapted from GES 1point5 ([Mariette et al., 2022](https://doi.org/10.1088/2634-4505/ac84a4)). **This step will also be integrated into the UI; it currently runs from the command line.**
+
+```bash
+python carbon_footprint.py travels.xlsx \
+    --origin-city-column "Ville départ" \
+    --origin-country-column "Pays départ" \
+    --destination-city-column "Ville arrivée" \
+    --destination-country-column "Pays arrivée" \
+    --mode-column "Mode" \
+    --plane-values avion plane flight \
+    --train-values train rail \
+    --car-values voiture car \
+    --taxi-values taxi \
+    --bus-values bus autocar "Autocar intercité" coach
+```
+
+Adapt column names and mode labels to your workbook. The first worksheet is used unless `--sheet` is specified. Outputs are:
+
+- `travels_carbon.xlsx`: source data plus a `carbon footprint` column in kg CO₂e.
+- `travels_carbon_errors.csv`: unresolved locations, missing data and unknown modes.
+- `travels_geocode_cache.json`: cached coordinates.
+
+Each row represents **one one-way segment**. Include return segments or adjust emissions before aggregation; round-trip and passenger-count columns are not interpreted. Taxi estimates already include an empty-return factor of two, separate from any passenger return journey.
+
+Review the error report and resolve missing estimates, then import the enriched workbook into the app, map `carbon footprint` to `emissions_kg_co2e`, and follow simple mode above. Retain the mission identifiers and metadata required for mapping.
+
+Uncached locations require internet access to OpenStreetMap Nominatim. Keep the geocoding cache and factor settings for reproducibility; `--cache PATH` selects a cache and `--offline` uses cached locations only.
+
+**The study workbook is not included in the public repository** because it contains confidential institutional travel records.
 
 ## Run the workflow
 
@@ -86,36 +123,6 @@ The dataset table summarizes eligible missions, distinct travelers, teams, and e
 - **Prioritization:** five equally sampled hypothetical families (`cost`, `distributive`, `longitudinal`, `random`, `sequential`); the example workflow uses 10,000 rules with seed 42.
 - **Calibration:** targets are attained *in expectation* when necessary by mixing two complete, indivisible-mission allocations.
 - **Reporting:** medians and ranges describe sensitivity across sampled rules, **not** confidence intervals or probabilities of real-world behavior. Differences relative to `λ = 0` are paired within each sampled rule; they are not isolated causal effects of pooling.
-
-## Estimate travel emissions from a workbook
-
-The `carbon_footprint.py` script estimates CO₂e emissions for individual travel segments using geographic distances and transport-specific emission factors adapted from GES 1point5 (Mariette et al., 2022; https://doi.org/10.1088/2634-4505/ac84a4).
-
-```bash
-python carbon_footprint.py travels.xlsx \
-    --origin-city-column "Ville départ" \
-    --origin-country-column "Pays départ" \
-    --destination-city-column "Ville arrivée" \
-    --destination-country-column "Pays arrivée" \
-    --mode-column "Mode" \
-    --plane-values avion plane flight \
-    --train-values train rail \
-    --car-values voiture car \
-    --taxi-values taxi \
-    --bus-values bus autocar "Autocar intercité" coach
-```
-
-The first worksheet is used by default; `--sheet` selects another worksheet. Column names and transport-mode labels are configurable.
-
-The script generates:
-
-- `travels_carbon.xlsx`: original workbook with an additional `carbon footprint` column (kg CO₂e).
-- `travels_carbon_errors.csv`: unresolved locations, missing data, and unrecognized transport modes.
-- `travels_geocode_cache.json`: cached geographic coordinates for subsequent runs.
-
-Each row is processed independently, and emissions are estimated for a single **one-way travel segment** between the specified locations. The script does not interpret additional columns indicating round trips, passenger counts, or other travel arrangements. Users must apply any necessary adjustments (e.g., doubling emissions for a round trip) before aggregating emissions into complete missions for the `carbon_footprint.xlsx` input workbook. Note, however, that taxi emissions systematically include a factor of two to account for an assumed empty return journey; this is separate from any passenger round trip.
-
-Geocoding uses OpenStreetMap's Nominatim service and requires an internet connection for uncached locations. Use `--offline` to rely exclusively on cached coordinates. For reproducible emissions, retain the geocoding cache alongside the emission-factor settings: geocoding results can change between runs. Use `--cache PATH` to specify the cache file when rerunning calculations.
 
 ## License
 

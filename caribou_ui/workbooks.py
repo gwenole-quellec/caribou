@@ -1,0 +1,161 @@
+"""Workbook mapping, mission aggregation and validation, independent of Streamlit."""
+
+from io import BytesIO
+import unicodedata
+import numpy as np
+import pandas as pd
+
+COLUMNS = [
+    "mission_id",
+    "year",
+    "person_id",
+    "team",
+    "mission_type",
+    "start_date",
+    "emissions_kg_co2e",
+]
+ALIASES = {
+    "mission_id": ["mission", "id mission", "numero mission"],
+    "year": ["annee"],
+    "person_id": ["agent", "id agent", "matricule"],
+    "team": ["equipe", "service"],
+    "mission_type": ["type mission", "motif"],
+    "start_date": ["date depart", "date debut"],
+    "emissions_kg_co2e": ["carbon footprint", "co2", "emissions", "kg co2e"],
+}
+
+
+def normalized(value):
+    return (
+        "".join(
+            c
+            for c in unicodedata.normalize("NFKD", str(value).lower())
+            if not unicodedata.combining(c)
+        )
+        .replace("_", " ")
+        .strip()
+    )
+
+
+def suggest_mapping(columns):
+    return {
+        field: next(
+            (
+                c
+                for c in columns
+                if normalized(c) in [normalized(field), *ALIASES[field]]
+            ),
+            None,
+        )
+        for field in COLUMNS
+    }
+
+
+def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
+    """Return eligible missions and errors; record excluded rows in DataFrame attrs."""
+    errors = []
+    required = [c for c in COLUMNS if c != "year"]
+    if any(not mapping.get(c) for c in required):
+        return pd.DataFrame(columns=COLUMNS), ["Map all required columns."]
+    selected = [v for v in mapping.values() if v is not None]
+    if len(selected) != len(set(selected)):
+        return pd.DataFrame(columns=COLUMNS), [
+            "A source column cannot be mapped to multiple fields."
+        ]
+    df = pd.DataFrame({c: source[mapping[c]].copy() for c in COLUMNS if mapping.get(c)})
+    for c in ["mission_id", "person_id", "team", "mission_type"]:
+        df[c] = df[c].astype("string").str.strip().replace("", pd.NA)
+    # Match the simulator: exclude rows without a team before validation.
+    missing_team = df["team"].isna()
+    ignored_rows = int(missing_team.sum())
+    df = df.loc[~missing_team].copy()
+
+    # Numeric Excel serials must not be interpreted as nanoseconds since 1970.
+    raw_dates = df["start_date"]
+    if pd.api.types.is_numeric_dtype(raw_dates):
+        df["start_date"] = pd.to_datetime(
+            raw_dates, unit="D", origin="1899-12-30", errors="coerce"
+        )
+    else:
+        df["start_date"] = pd.to_datetime(
+            raw_dates, errors="coerce", dayfirst=dayfirst, format="mixed"
+        )
+    df["year"] = (
+        pd.to_numeric(df["year"], errors="coerce")
+        if "year" in df
+        else df.start_date.dt.year
+    )
+    values = df.emissions_kg_co2e
+    if not pd.api.types.is_numeric_dtype(values):
+        values = (
+            values.astype("string")
+            .str.replace("\u202f", "", regex=False)
+            .str.replace(" ", "", regex=False)
+            .str.replace(",", ".", regex=False)
+        )
+    df["emissions_kg_co2e"] = pd.to_numeric(values, errors="coerce") * (
+        1000 if tonnes else 1
+    )
+    if df.empty:
+        errors.append(
+            "No eligible missions remain after excluding rows without a team."
+        )
+    for c in COLUMNS:
+        count = int(df[c].isna().sum())
+        if count:
+            errors.append(f"{c} : {count} missing or invalid value(s).")
+    if (df.year.notna() & (df.year != df.start_date.dt.year)).any():
+        errors.append("The year must match the departure date.")
+    invalid = ~np.isfinite(df.emissions_kg_co2e.astype(float)) | (
+        df.emissions_kg_co2e < 0
+    )
+    if invalid.any():
+        errors.append("Emissions must be finite and nonnegative.")
+    if df.emissions_kg_co2e.sum() <= 0:
+        errors.append("Total emissions must be strictly positive.")
+    if aggregate:
+        for c in ["year", "person_id", "team", "mission_type"]:
+            if (df.groupby("mission_id")[c].nunique(dropna=False) > 1).any():
+                errors.append(
+                    f"Inconsistent segments: multiple values of {c} for the same mission."
+                )
+        if not errors:
+            df = df.groupby("mission_id", as_index=False).agg(
+                year=("year", "first"),
+                person_id=("person_id", "first"),
+                team=("team", "first"),
+                mission_type=("mission_type", "first"),
+                start_date=("start_date", "min"),
+                emissions_kg_co2e=("emissions_kg_co2e", "sum"),
+            )
+    elif df.mission_id.duplicated().any():
+        errors.append(
+            "Duplicate mission identifiers: enable segment grouping if appropriate."
+        )
+    if not errors:
+        df["year"] = df.year.astype(int)
+    result = df[COLUMNS].copy()
+    result.attrs["ignored_no_team_rows"] = ignored_rows
+    return result, errors
+
+
+def export_workbook(df):
+    output = BytesIO()
+    # Prevent spreadsheet applications from interpreting source text as formulas.
+    safe = df.copy()
+    for c in ["mission_id", "person_id", "team", "mission_type"]:
+        safe[c] = safe[c].map(
+            lambda v: (
+                "'" + v
+                if isinstance(v, str) and v.startswith(("=", "+", "-", "@"))
+                else v
+            )
+        )
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        safe.to_excel(writer, sheet_name="missions", index=False)
+        sheet = writer.sheets["missions"]
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions
+        for column in sheet.columns:
+            sheet.column_dimensions[column[0].column_letter].width = 24
+    return output.getvalue()
