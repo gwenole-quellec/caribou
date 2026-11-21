@@ -60,3 +60,5 @@ dist/
 !/tables/table_dataset.tex
 !/tables/table_outcomes.md
 !/tables/table_outcomes.tex
+
+/carbon_footprint/
