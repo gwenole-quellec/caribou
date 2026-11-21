@@ -29,8 +29,6 @@ The simulator expects an Excel worksheet named `missions`, with **one row per co
 | `start_date` | Departure date, as an Excel date or parseable text. |
 | `emissions_kg_co2e` | Total emissions of all mission segments, in kg CO₂e; finite and nonnegative. |
 
-Store identifiers as text to preserve leading zeros. Team sizes count travelers with eligible missions, not complete personnel rosters. Mission types can be excluded at simulation time with `--exclude-mission-types`.
-
 ### Simple mode: emissions already available
 
 In the Streamlit app, upload the consolidated `.xlsx`, select its worksheet and map the columns. If `year` is unmapped, it is derived from `start_date`. Select the source emissions unit and the interpretation of ambiguous text dates.
