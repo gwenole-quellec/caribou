@@ -25,21 +25,29 @@ The simulator expects an Excel worksheet named `missions`, with **one row per co
 | `year` | Departure year, matching `start_date`. |
 | `person_id` | Traveler identifier, stable across years. |
 | `team` | Research team; rows without a team are ignored. |
-| `mission_type` | Mission purpose, e.g., `research` or `teaching`. |
+| `mission_type` | Mission purpose; may be blank. Multiple purposes are separated by commas. |
 | `start_date` | Departure date, as an Excel date or parseable text. |
 | `emissions_kg_co2e` | Total emissions of all mission segments, in kg CO₂e; finite and nonnegative. |
 
 ### Simple mode: emissions already available
 
-In the Streamlit app, upload the consolidated `.xlsx`, select its worksheet and map the columns. If `year` is unmapped, it is derived from `start_date`. Select the source emissions unit and the interpretation of ambiguous text dates.
+Column mappings start empty in both modes. An unmapped `mission_type` remains blank. When excluding mission types in the command-line workflow, a match on any comma-separated purpose excludes the complete mission.
 
-If several rows represent segments of the same mission, enable **Group segments by mission_id**: emissions are summed and the earliest date is retained; traveler, team, mission type and year must match. Otherwise, mission IDs must be unique. Rows without a team are ignored, with a warning.
+In **Simple preparation**, upload the consolidated `.xlsx`, select its worksheet and map the columns. If `year` is unmapped, it is derived from `start_date`. Select the source emissions unit and the interpretation of ambiguous text dates.
 
-Resolve validation errors, then download `carbon_footprint.xlsx` and use it as the simulation input. The **Visualizations** tab explores the prepared data. This mode does not estimate emissions.
+If several rows represent segments of the same mission, enable **Group segments by mission_id**: emissions are summed and the earliest date is retained; traveler, team and year must match. Distinct nonempty mission types are joined with commas. Otherwise, mission IDs must be unique. In simple mode, missions without a team stay in the exported workbook and Visualization, with their team cells blank. The simulator still excludes these missions.
+
+Resolve validation errors, then download `carbon_footprint.xlsx` and use it as the simulation input. The final **Visualization** tab explores validated missions from either mode; select the data source when both are available. This mode does not estimate emissions.
 
 ### Full mode: estimate emissions from travel segments
 
-If emissions are unavailable, first run `carbon_footprint.py` on a workbook containing origin/destination cities and countries and transport modes. It estimates segment emissions from geographic distances and transport-specific factors adapted from GES 1point5 ([Mariette et al., 2022](https://doi.org/10.1088/2634-4505/ac84a4)). **This step will also be integrated into the UI; it currently runs from the command line.**
+If emissions are unavailable, open **Advanced preparation**, and upload a workbook containing origin/destination cities and countries and transport modes. In the initial form, map the mission metadata and the five travel columns, choose whether to combine segments (enabled by default in advanced mode), and edit the recognized mode labels if needed (one label per line). Emissions are calculated automatically in kg CO₂e; no emissions column is required. This tab uses the same geographic distances and emission factors as `carbon_footprint.py`, adapted from GES 1point5 ([Mariette et al., 2022](https://doi.org/10.1088/2634-4505/ac84a4)).
+
+Select an optional round-trip column accepting `yes/no`, `oui/non`, `true/false` or `1/0`; blank or unknown values produce row errors. Without a column, **All journeys are round trips** applies to every row and is unchecked by default (one-way). A round trip doubles the estimate; do not select it if return segments are already separate rows. Taxi estimates already include an empty vehicle return, distinct from the passenger return journey.
+
+Optionally upload a geocoding cache, or select offline mode to use cached coordinates only. Online calculation sends city/country pairs to OpenStreetMap Nominatim. Click **Calculate emissions**. Mission metadata is checked before geocoding; rows without a team are ignored. Calculation errors block the final export and Visualization until corrected. Once valid, download `carbon_footprint.xlsx`: it contains the `missions` worksheet with one row per complete mission and the seven simulation columns, exactly as in simple mode. The same missions are available immediately in **Visualization**. The error report and geocoding cache can also be downloaded. No second mapping form or reimport is needed.
+
+The equivalent command-line workflow remains available (one-way segments only):
 
 ```bash
 python carbon_footprint.py travels.xlsx \
@@ -125,3 +133,4 @@ The dataset table summarizes eligible missions, distinct travelers, teams, and e
 ## License
 
 The code is released under the repository's BSD 3-Clause license.
+

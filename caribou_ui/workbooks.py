@@ -51,10 +51,29 @@ def suggest_mapping(columns):
     }
 
 
-def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
+def combine_mission_types(values):
+    """Join distinct nonempty comma-separated purposes in source order."""
+    purposes = {}
+    for value in values:
+        for part in str(value).split(","):
+            label = part.strip()
+            if label:
+                purposes.setdefault(label.casefold(), label)
+    return ", ".join(purposes.values())
+
+
+def prepare(
+    source,
+    mapping,
+    aggregate=False,
+    tonnes=False,
+    dayfirst=True,
+    *,
+    keep_empty_teams=False,
+):
     """Return eligible missions and errors; record excluded rows in DataFrame attrs."""
     errors = []
-    required = [c for c in COLUMNS if c != "year"]
+    required = [c for c in COLUMNS if c not in {"year", "mission_type"}]
     if any(not mapping.get(c) for c in required):
         return pd.DataFrame(columns=COLUMNS), ["Map all required columns."]
     selected = [v for v in mapping.values() if v is not None]
@@ -63,12 +82,20 @@ def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
             "A source column cannot be mapped to multiple fields."
         ]
     df = pd.DataFrame({c: source[mapping[c]].copy() for c in COLUMNS if mapping.get(c)})
+    if "mission_type" not in df:
+        df["mission_type"] = ""
     for c in ["mission_id", "person_id", "team", "mission_type"]:
         df[c] = df[c].astype("string").str.strip().replace("", pd.NA)
+    df["mission_type"] = df["mission_type"].fillna("")
+
     # Match the simulator: exclude rows without a team before validation.
     missing_team = df["team"].isna()
     ignored_rows = int(missing_team.sum())
-    df = df.loc[~missing_team].copy()
+    if keep_empty_teams:
+        df["team"] = df["team"].fillna("")
+        ignored_rows = 0
+    else:
+        df = df.loc[~missing_team].copy()
 
     # Numeric Excel serials must not be interpreted as nanoseconds since 1970.
     raw_dates = df["start_date"]
@@ -97,9 +124,7 @@ def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
         1000 if tonnes else 1
     )
     if df.empty:
-        errors.append(
-            "No eligible missions remain after excluding rows without a team."
-        )
+        errors.append("No missions remain to prepare.")
     for c in COLUMNS:
         count = int(df[c].isna().sum())
         if count:
@@ -114,7 +139,7 @@ def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
     if df.emissions_kg_co2e.sum() <= 0:
         errors.append("Total emissions must be strictly positive.")
     if aggregate:
-        for c in ["year", "person_id", "team", "mission_type"]:
+        for c in ["year", "person_id", "team"]:
             if (df.groupby("mission_id")[c].nunique(dropna=False) > 1).any():
                 errors.append(
                     f"Inconsistent segments: multiple values of {c} for the same mission."
@@ -124,7 +149,7 @@ def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
                 year=("year", "first"),
                 person_id=("person_id", "first"),
                 team=("team", "first"),
-                mission_type=("mission_type", "first"),
+                mission_type=("mission_type", combine_mission_types),
                 start_date=("start_date", "min"),
                 emissions_kg_co2e=("emissions_kg_co2e", "sum"),
             )
@@ -136,6 +161,9 @@ def prepare(source, mapping, aggregate=False, tonnes=False, dayfirst=True):
         df["year"] = df.year.astype(int)
     result = df[COLUMNS].copy()
     result.attrs["ignored_no_team_rows"] = ignored_rows
+    result.attrs["kept_no_team_rows"] = (
+        int(missing_team.sum()) if keep_empty_teams else 0
+    )
     return result, errors
 
 

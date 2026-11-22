@@ -189,9 +189,12 @@ def load_missions(
 
     excluded_types = {value.strip().casefold() for value in exclude_mission_types}
     excluded_types.discard("")
-    types = df["mission_type"].astype("string").fillna("").str.strip().str.casefold()
+    df["mission_type"] = df["mission_type"].astype("string").fillna("").str.strip()
+    types = df["mission_type"].str.casefold()
     # Count each excluded mission once: missing team takes precedence.
-    excluded_type_mask = (~missing_team_mask) & types.isin(excluded_types)
+    excluded_type_mask = (~missing_team_mask) & types.map(
+        lambda value: any(part.strip() in excluded_types for part in value.split(","))
+    )
     eligible_mask = ~(missing_team_mask | excluded_type_mask)
 
     df = df.loc[eligible_mask].copy()
@@ -1097,3 +1100,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

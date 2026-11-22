@@ -7,20 +7,29 @@ import pandas as pd
 import streamlit as st
 
 
-def render(df):
+def render(df, context="missions"):
+    df = df.copy()
+    df["team"] = df["team"].fillna("").replace("", "(No team)")
     st.caption(
         "Consolidated data after mapping and optional segment grouping, before simulation."
     )
     years = st.multiselect(
-        "Years", sorted(df.year.unique()), default=sorted(df.year.unique())
+        "Years",
+        sorted(df.year.unique()),
+        default=sorted(df.year.unique()),
+        key=f"{context}-years",
     )
     teams = st.multiselect(
-        "Teams", sorted(df.team.unique()), default=sorted(df.team.unique())
+        "Teams",
+        sorted(df.team.unique()),
+        default=sorted(df.team.unique()),
+        key=f"{context}-teams",
     )
     types = st.multiselect(
         "Mission types",
         sorted(df.mission_type.unique()),
         default=sorted(df.mission_type.unique()),
+        key=f"{context}-types",
     )
     view = df[
         df.year.isin(years) & df.team.isin(teams) & df.mission_type.isin(types)
