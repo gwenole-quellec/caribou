@@ -13,6 +13,7 @@ from caribou_ui.advanced import render_advanced
 from caribou_ui.preparation import render_missions
 from caribou_ui.visualizations import render
 
+
 st.set_page_config(page_title="CARIBOU", page_icon="🦌", layout="wide")
 st.title("🦌 CARIBOU")
 st.caption("Prepare missions and explore their carbon footprint")
@@ -80,3 +81,4 @@ with viz_tab:
         mode = st.radio("Data source", list(available), horizontal=True)
         st.caption(f"Showing validated missions from {mode}.")
         render(available[mode], context=mode)
+

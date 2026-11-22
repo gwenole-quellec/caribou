@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""Shared mission mapping, validation and export for both preparation modes."""
+"""CARIBOU — Shared mission mapping, validation and export for both preparation modes."""
 
 import streamlit as st
-from caribou_ui.workbooks import COLUMNS, prepare, export_workbook
+from caribou_data.workbooks import COLUMNS, prepare, export_workbook
 
 
 def mission_controls(source, context, calculated_emissions=False):
@@ -114,3 +114,4 @@ def render_validated(missions, errors, context):
         )
 
     return None if errors else missions
+

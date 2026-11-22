@@ -8,16 +8,16 @@ explore_budget_allocation.py: missions without a team are always ignored, and sp
 are excluded. No mission type is excluded by default.
 
 Outputs:
-  tables/table_dataset.tex             LaTeX descriptive table
-  tables/table_dataset.md              Markdown descriptive table
-  figures/fig_emissions_histogram.pdf  Mission-emissions histogram
-  figures/fig_emissions_histogram.png  Same histogram (300 dpi)
+  artifacts/table_dataset.tex             LaTeX descriptive table
+  artifacts/table_dataset.md              Markdown descriptive table
+  artifacts/fig_emissions_histogram.pdf  Mission-emissions histogram
+  artifacts/fig_emissions_histogram.png  Same histogram (300 dpi)
 
 Reports annual and overall statistics; distinct travelers and teams are counted separately for each
 period, so annual counts are not additive.
 
 Usage:
-  python describe_missions.py --input carbon_footprint.xlsx \
+  python -m caribou_data.describe_missions --input carbon_footprint.xlsx \
       --exclude-mission-types research_administration
 """
 
@@ -311,11 +311,11 @@ def parse_args() -> argparse.Namespace:
         help="Mission types to exclude (case-insensitive); missions without a team are always excluded",
     )
     parser.add_argument(
-        "--table-dir", type=Path, default=Path("tables"),
+        "--table-dir", type=Path, default=Path("artifacts"),
         help="Output directory for LaTeX and Markdown tables",
     )
     parser.add_argument(
-        "--figure-dir", type=Path, default=Path("figures"),
+        "--figure-dir", type=Path, default=Path("artifacts"),
         help="Output directory for the PDF and PNG histogram",
     )
     parser.add_argument(

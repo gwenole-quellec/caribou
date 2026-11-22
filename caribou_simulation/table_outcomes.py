@@ -13,11 +13,11 @@ and are expressed in percentage points.
 Results characterize sensitivity to hypothetical prioritization behaviors, not probabilities of
 real-world decisions.
 
-Inputs:  results/budget_allocation_{5,10,15,20}pct.json
-Outputs: tables/table_outcomes.tex, tables/table_outcomes.md
+Inputs:  artifacts/results/budget_allocation_{5,10,15,20}pct.json
+Outputs: artifacts/table_outcomes.tex, artifacts/table_outcomes.md
 
 Usage:
-    python table_outcomes.py --results-dir results --lambda 0.5
+    python -m caribou_simulation.table_outcomes --results-dir artifacts/results --lambda 0.5
 """
 
 from __future__ import annotations
@@ -246,7 +246,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--results-dir", type=Path, default=Path("results"),
+        "--results-dir", type=Path, default=Path("artifacts/results"),
         help="Directory containing CARIBOU budget_allocation_*pct.json files",
     )
     parser.add_argument(
@@ -254,7 +254,7 @@ def parse_args() -> argparse.Namespace:
         help="Pooling fraction to compare against lambda=0",
     )
     parser.add_argument(
-        "--output-dir", type=Path, default=Path("tables"),
+        "--output-dir", type=Path, default=Path("artifacts"),
         help="Directory in which to save LaTeX and Markdown tables",
     )
     parser.add_argument(
@@ -295,3 +295,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

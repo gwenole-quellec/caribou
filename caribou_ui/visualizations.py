@@ -71,3 +71,4 @@ def render(df, context="missions"):
         }
     )
     st.line_chart(curve, x="Cumulative missions (%)", y="Cumulative emissions (%)")
+

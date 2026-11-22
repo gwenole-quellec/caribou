@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""Estimate workbook emissions using the existing CARIBOU calculation engine."""
+"""CARIBOU — Estimate workbook emissions using the existing CARIBOU calculation engine."""
 
-from argparse import Namespace
 from dataclasses import dataclass
 from io import BytesIO, StringIO
 from pathlib import Path
@@ -14,7 +13,12 @@ import json
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
 
-import carbon_footprint as engine
+from caribou_data import carbon_footprint as engine
+
+
+# ==================================================================================================
+# Constants
+# ==================================================================================================
 
 FIELDS = (
     "origin_city",
@@ -25,13 +29,216 @@ FIELDS = (
 )
 
 MODE_ALIASES = {
-    "plane": ["avion", "plane", "flight"],
-    "train": ["train", "rail"],
-    "car": ["voiture", "car"],
-    "taxi": ["taxi"],
-    "bus": ["bus", "autocar", "Autocar intercité", "coach"],
+    "plane": [
+        "avion",
+        "avions",
+        "vol",
+        "vols",
+        "transport aérien",
+        "déplacement aérien",
+        "trajet aérien",
+        "voyage aérien",
+        "vol intérieur",
+        "vol domestique",
+        "vol national",
+        "vol international",
+        "vol européen",
+        "vol court courrier",
+        "vol moyen courrier",
+        "vol long courrier",
+        "court courrier",
+        "moyen courrier",
+        "long courrier",
+        "plane",
+        "airplane",
+        "aeroplane",
+        "aircraft",
+        "flight",
+        "flights",
+        "air",
+        "air travel",
+        "air transport",
+        "air transportation",
+        "domestic flight",
+        "international flight",
+        "short haul flight",
+        "medium haul flight",
+        "long haul flight",
+    ],
+    "train": [
+        "train",
+        "trains",
+        "rail",
+        "transport ferroviaire",
+        "trajet ferroviaire",
+        "voyage en train",
+        "chemin de fer",
+        "TGV",
+        "TGV INOUI",
+        "INOUI",
+        "OUIGO",
+        "TER",
+        "Intercités",
+        "train régional",
+        "train express régional",
+        "train grande ligne",
+        "train à grande vitesse",
+        "train de nuit",
+        "train couchette",
+        "Eurostar",
+        "Thalys",
+        "Lyria",
+        "TGV Lyria",
+        "ICE",
+        "AVE",
+        "railway",
+        "railroad",
+        "rail travel",
+        "rail transport",
+        "rail transportation",
+        "passenger train",
+        "regional train",
+        "intercity train",
+        "high speed train",
+        "high speed rail",
+        "express train",
+        "night train",
+        "overnight train",
+        "sleeper train",
+    ],
+    "car": [
+        "voiture",
+        "voitures",
+        "auto",
+        "automobile",
+        "véhicule",
+        "véhicule personnel",
+        "véhicule particulier",
+        "véhicule privé",
+        "voiture personnelle",
+        "voiture particulière",
+        "voiture privée",
+        "voiture de service",
+        "véhicule de service",
+        "voiture de fonction",
+        "véhicule de fonction",
+        "voiture de location",
+        "véhicule de location",
+        "location de voiture",
+        "voiture de prêt",
+        "covoiturage",
+        "car",
+        "cars",
+        "motor car",
+        "passenger car",
+        "personal car",
+        "private car",
+        "private vehicle",
+        "company car",
+        "company vehicle",
+        "staff car",
+        "rental car",
+        "rented car",
+        "hire car",
+        "car hire",
+        "car rental",
+        "pool car",
+        "carpool",
+        "carpooling",
+        "car sharing",
+    ],
+    "taxi": [
+        "taxi",
+        "taxis",
+        "taxi conventionné",
+        "taxi parisien",
+        "taxi collectif",
+        "voiture avec chauffeur",
+        "véhicule avec chauffeur",
+        "voiture de transport avec chauffeur",
+        "VTC",
+        "chauffeur privé",
+        "service de chauffeur",
+        "radio taxi",
+        "taxicab",
+        "taxi cab",
+        "cab",
+        "cabs",
+        "private hire vehicle",
+        "private hire car",
+        "minicab",
+        "chauffeur driven car",
+        "chauffeur service",
+        "car service",
+        "ride hailing",
+        "ride hailing service",
+        "ridesourcing",
+        "Uber",
+        "UberX",
+        "Uber taxi",
+        "Bolt",
+        "Free Now",
+        "FREENOW",
+        "G7",
+    ],
+    "bus": [
+        "bus",
+        "autocar",
+        "autocars",
+        "car interurbain",
+        "autocar interurbain",
+        "autocar intercité",
+        "autocar intercités",
+        "autocar intercity",
+        "autocar longue distance",
+        "autocar de tourisme",
+        "car de tourisme",
+        "autocar de ligne",
+        "autocar express",
+        "autocar régional",
+        "autocar départemental",
+        "autocar interrégional",
+        "autocar national",
+        "autocar international",
+        "autocar de nuit",
+        "autocar trajets intercités",
+        "autocar - trajets intercités",
+        "transport par autocar",
+        "voyage en autocar",
+        "coach",
+        "coaches",
+        "motorcoach",
+        "motor coach",
+        "intercity bus",
+        "intercity coach",
+        "interurban bus",
+        "interurban coach",
+        "long distance bus",
+        "long distance coach",
+        "regional coach",
+        "express coach",
+        "express bus",
+        "highway coach",
+        "touring coach",
+        "charter coach",
+        "charter bus",
+        "overnight bus",
+        "night coach",
+        "FlixBus",
+        "BlaBlaCar Bus",
+        "BlaBlaBus",
+        "Ouibus",
+        "Eurolines",
+        "National Express",
+        "Megabus",
+        "Greyhound",
+    ],
 }
 
+
+# ==================================================================================================
+# Data structures
+# ==================================================================================================
 
 @dataclass
 class EmissionResult:
@@ -44,6 +251,10 @@ class EmissionResult:
     rows: int
     issues: list[dict]
 
+
+# ==================================================================================================
+# Utilities
+# ==================================================================================================
 
 def parse_round_trip(value):
     """Parse explicit English/French yes/no labels; reject missing/unknown values."""
@@ -67,6 +278,10 @@ def parse_cache(raw):
     return {key: list(map(float, value)) for key, value in data.items()}
 
 
+# ==================================================================================================
+# Emission calculation
+# ==================================================================================================
+
 def calculate(
     raw,
     sheet_name,
@@ -89,14 +304,7 @@ def calculate(
     """
     if header < 1:
         raise ValueError("The header row must be positive.")
-    mode_map = engine.build_mode_map(
-        Namespace(
-            **{
-                f"{mode}_values": values
-                for mode, values in (aliases or MODE_ALIASES).items()
-            }
-        )
-    )
+    mode_map = engine.build_mode_map(aliases or MODE_ALIASES)
     cache = parse_cache(cache_bytes)
     workbook = load_workbook(BytesIO(raw))
 
@@ -218,3 +426,4 @@ def calculate(
         )
     finally:
         workbook.close()
+

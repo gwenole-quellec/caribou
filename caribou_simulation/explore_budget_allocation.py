@@ -292,6 +292,7 @@ def load_missions(
         metadata=metadata,
     )
 
+
 # ==================================================================================================
 # Sampling decision rules
 # ==================================================================================================
@@ -1056,7 +1057,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--input", type=Path, required=True,
         help="Input workbook (e.g. carbon_analysis.xlsx), sheet 'missions'",
     )
-    parser.add_argument("--output-dir", type=Path, default=Path("results"))
+    parser.add_argument("--output-dir", type=Path, default=Path("artifacts/results"))
     parser.add_argument(
         "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
         help="Mission types to exclude (case-insensitive); missions without a team are always excluded",

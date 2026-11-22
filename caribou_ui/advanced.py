@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""Streamlit controls for estimating emissions from travel segments."""
+"""CARIBOU — Streamlit controls for estimating emissions from travel segments."""
 
 from hashlib import sha256
 from io import BytesIO
@@ -11,16 +11,16 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from caribou_ui.emissions import FIELDS, MODE_ALIASES, calculate
+from caribou_data.emissions import FIELDS, MODE_ALIASES, calculate
 from caribou_ui.preparation import mission_controls, render_validated
-from caribou_ui.workbooks import prepare
+from caribou_data.workbooks import prepare
 
 
 def render_advanced():
     """Render an independent advanced workflow with session-local results."""
     st.subheader("Estimate emissions from travel segments")
     st.caption(
-        "Uses the same distances and emission factors as carbon_footprint.py. "
+        "Uses the same distances and emission factors as caribou_data.carbon_footprint. "
         "Each row describes one travel segment, optionally including its return journey."
     )
     upload = st.file_uploader(
@@ -245,3 +245,4 @@ def render_advanced():
         enriched, mission_mapping, aggregate=aggregate, dayfirst=dayfirst
     )
     return render_validated(missions, errors, prefix + "-result")
+

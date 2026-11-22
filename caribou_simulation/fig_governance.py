@@ -425,14 +425,14 @@ def main() -> None:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("results"),
+        default=Path("artifacts/results"),
         help="Directory containing CARIBOU JSON simulation reports",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("figures"),
-        help="Directory for the PNG and PDF outputs (default: figures)",
+        default=Path("artifacts"),
+        help="Directory for the PNG and PDF outputs (default: artifacts)",
     )
     args = parser.parse_args()
 
@@ -450,3 +450,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

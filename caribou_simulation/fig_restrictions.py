@@ -360,12 +360,12 @@ def plot_restrictions(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--results-dir", type=Path, default=Path("results"),
+        "--results-dir", type=Path, default=Path("artifacts/results"),
         help="Directory containing CARIBOU JSON simulation reports",
     )
     parser.add_argument(
-        "--output-dir", type=Path, default=Path("figures"),
-        help="Directory for the PNG and PDF figures (default: figures)",
+        "--output-dir", type=Path, default=Path("artifacts"),
+        help="Directory for the PNG and PDF figures (default: artifacts)",
     )
     args = parser.parse_args()
 
@@ -375,3 +375,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

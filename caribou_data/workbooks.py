@@ -1,9 +1,17 @@
-"""Workbook mapping, mission aggregation and validation, independent of Streamlit."""
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 CARIBOU contributors
+
+"""CARIBOU — Workbook mapping, mission aggregation and validation, independent of Streamlit."""
 
 from io import BytesIO
 import unicodedata
 import numpy as np
 import pandas as pd
+
+
+# ==================================================================================================
+# Constants
+# ==================================================================================================
 
 COLUMNS = [
     "mission_id",
@@ -24,6 +32,10 @@ ALIASES = {
     "emissions_kg_co2e": ["carbon footprint", "co2", "emissions", "kg co2e"],
 }
 
+
+# ==================================================================================================
+# Utilities
+# ==================================================================================================
 
 def normalized(value):
     return (
@@ -61,6 +73,10 @@ def combine_mission_types(values):
                 purposes.setdefault(label.casefold(), label)
     return ", ".join(purposes.values())
 
+
+# ==================================================================================================
+# Data preparation
+# ==================================================================================================
 
 def prepare(
     source,
@@ -187,3 +203,4 @@ def export_workbook(df):
         for column in sheet.columns:
             sheet.column_dimensions[column[0].column_letter].width = 24
     return output.getvalue()
+
