@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — Data preparation application."""
+"""CARIBOU — Main application."""
 
 from hashlib import sha256
 from io import BytesIO
@@ -12,16 +12,39 @@ import streamlit as st
 from caribou_ui.advanced import render_advanced
 from caribou_ui.preparation import render_missions
 from caribou_ui.visualizations import render
+from caribou_ui.simulation import render_simulation
+from caribou_ui.artifacts import render_artifacts
 
 
 st.set_page_config(page_title="CARIBOU", page_icon="🦌", layout="wide")
 st.title("🦌 CARIBOU")
-st.caption("Prepare missions and explore their carbon footprint")
+st.markdown(
+    "Explore your team’s travel emissions and compare carbon-budget scenarios.\n\n"
+    "**1. Prepare your data** — Choose **Simple preparation** if emissions are already "
+    "calculated, or **Advanced preparation** to estimate them from travel locations and "
+    "transportation modes. Already have a CARIBOU missions workbook? Go straight to **Simulation**.\n\n"
+    "**2. Explore** — Inspect your data, filter the charts and generate a dataset summary in **Visualization**.\n\n"
+    "**3. Simulate** — Set reduction targets and compare individual versus shared team budgets, "
+    "using prepared data or an uploaded missions workbook.\n\n"
+    "**4. Export** — Generate, preview and download figures and the summary table in **Artifacts**."
+)
+with st.expander("Keeping your results"):
+    st.write(
+        "Prepared data and results are held temporarily in this session. Download the files "
+        "you want to keep before closing or restarting the app. Nothing is automatically saved "
+        "to your project folders. You can upload a saved missions workbook or simulation reports "
+        "later to continue."
+    )
 
 
 def render_simple():
     """Import, map, validate and export previously estimated emissions."""
     st.subheader("Prepare missions from existing emissions")
+    st.caption(
+        "Upload an Excel workbook with emissions already calculated. Each row may be a complete "
+        "mission or a travel segment to combine. Match your columns below, then download the "
+        "validated missions workbook or continue directly to Visualization and Simulation."
+    )
     upload = st.file_uploader(
         "Consolidated Excel workbook", type=["xlsx"], key="simple-upload"
     )
@@ -56,8 +79,8 @@ def render_simple():
     return render_missions(source, f"{key}-{sheet}-{header}")
 
 
-simple_tab, advanced_tab, viz_tab = st.tabs(
-    ["Simple preparation", "Advanced preparation", "Visualization"]
+simple_tab, advanced_tab, viz_tab, simulation_tab, artifacts_tab = st.tabs(
+    ["1. Simple preparation", "1. Advanced preparation", "2. Visualization", "3. Simulation", "4. Artifacts"]
 )
 
 with simple_tab:
@@ -82,3 +105,11 @@ with viz_tab:
         st.caption(f"Showing validated missions from {mode}.")
         render(available[mode], context=mode)
 
+
+
+with simulation_tab:
+    render_simulation(available)
+
+
+with artifacts_tab:
+    render_artifacts()

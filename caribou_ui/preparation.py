@@ -7,8 +7,33 @@ import streamlit as st
 from caribou_data.workbooks import COLUMNS, prepare, export_workbook
 
 
+# ==================================================================================================
+# Constants
+# ==================================================================================================
+
+FIELD_HELP = {
+    "mission_id": "Identifies one complete mission for one traveler. It must be unique across people and years. Segments of that mission share this ID.",
+    "year": "Departure year. Leave unmapped to derive it from start_date; mapped values must match the date.",
+    "person_id": "Stable traveler identifier across all years. Store IDs as text in Excel to preserve leading zeros.",
+    "team": "Research team. Blank cells are retained in both preparation modes and excluded only during simulations. Select the column even if some cells are blank.",
+    "mission_type": "Mission purpose. Optional: leave unmapped or keep blank cells. Distinct purposes are combined with commas when segments are grouped.",
+    "start_date": "Departure date, as an Excel date or text. When segments are combined, the earliest date becomes the mission departure date.",
+    "emissions_kg_co2e": "Previously estimated emissions for each row. Select the tonnes-to-kg option only if the source values are in tonnes CO₂e.",
+}
+
+
+# ==================================================================================================
+# Utilities
+# ==================================================================================================
+
 def mission_controls(source, context, calculated_emissions=False):
     """Collect mission settings before importing or calculating emissions."""
+    st.caption(
+        "Required: mission ID, traveler ID, team column and departure date"
+        + ("." if calculated_emissions else ", plus emissions.")
+        + " Year can be derived from the date; mission type may remain blank. "
+        "Use stable traveler IDs and store identifiers as text in Excel to preserve leading zeros."
+    )
     mapping = {}
     for field in COLUMNS:
         if calculated_emissions and field == "emissions_kg_co2e":
@@ -21,6 +46,7 @@ def mission_controls(source, context, calculated_emissions=False):
             index=0,
             format_func=lambda v: "— Select a column —" if v is None else str(v),
             key=f"{context}-{field}",
+            help=FIELD_HELP[field],
         )
     st.caption(
         "If year is not mapped, it is taken from start_date. "
@@ -114,4 +140,3 @@ def render_validated(missions, errors, context):
         )
 
     return None if errors else missions
-

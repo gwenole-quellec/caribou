@@ -203,4 +203,3 @@ def export_workbook(df):
         for column in sheet.columns:
             sheet.column_dimensions[column[0].column_letter].width = 24
     return output.getvalue()
-

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — visualize how prioritization behaviors modify the burden of pooling.
+"""CARIBOU — Visualize how prioritization behaviors modify the burden of pooling.
 
 This figure summarizes how budget pooling changes the share of severely affected traveler-years
 relative to no pooling (lambda=0), separately for each family of sampled prioritization behaviors.
@@ -450,4 +450,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

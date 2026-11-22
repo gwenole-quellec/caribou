@@ -151,7 +151,6 @@ MODE_ALIASES = {
         "taxi",
         "taxis",
         "taxi conventionné",
-        "taxi parisien",
         "taxi collectif",
         "voiture avec chauffeur",
         "véhicule avec chauffeur",
@@ -159,6 +158,7 @@ MODE_ALIASES = {
         "VTC",
         "chauffeur privé",
         "service de chauffeur",
+        "taxi parisien",
         "radio taxi",
         "taxicab",
         "taxi cab",
@@ -295,12 +295,14 @@ def calculate(
     cache_bytes=None,
     offline=False,
     user_agent="CARIBOU-carbon-footprint-ui/1.0 (academic research)",
+    progress=None,
 ):
     """Enrich the selected worksheet, preserving source rows and other worksheets.
 
     A selected round-trip column overrides the global default. Invalid rows keep
     an empty footprint and appear in the error report. Only city/country pairs
     are passed to the engine's geocoder; temporary cache files are removed.
+    Optional progress(stage, completed, total) reports location, row and write stages.
     """
     if header < 1:
         raise ValueError("The header row must be positive.")
@@ -369,7 +371,8 @@ def calculate(
             raise ValueError("The worksheet contains no travel rows.")
         with TemporaryDirectory(prefix="caribou-geocode-") as temporary:
             failed = engine.resolve_locations(
-                places, cache, Path(temporary) / "cache.json", offline, user_agent
+                places, cache, Path(temporary) / "cache.json", offline, user_agent,
+                progress=(lambda done, total: progress("geocoding", done, total)) if progress else None,
             )
 
         footprint_column = ws.max_column + 1
@@ -378,7 +381,9 @@ def calculate(
         cell.fill = PatternFill("solid", fgColor="174A52")
         calculated = 0
         issues = []
-        for row, data, round_trip, flag_errors in rows:
+        if progress:
+            progress("emissions", 0, len(rows))
+        for completed, (row, data, round_trip, flag_errors) in enumerate(rows, start=1):
             footprint = None
             problems = list(flag_errors)
             if not problems:
@@ -408,12 +413,19 @@ def calculate(
                     }
                 )
 
+            if progress:
+                progress("emissions", completed, len(rows))
+
+        if progress:
+            progress("workbook", 0, 1)
         output = BytesIO()
         workbook.save(output)
         report = StringIO(newline="")
         writer = csv.DictWriter(report, fieldnames=engine.ERROR_COLUMNS)
         writer.writeheader()
         writer.writerows(issues)
+        if progress:
+            progress("workbook", 1, 1)
         return EmissionResult(
             workbook=output.getvalue(),
             errors=report.getvalue().encode("utf-8-sig"),
@@ -426,4 +438,3 @@ def calculate(
         )
     finally:
         workbook.close()
-

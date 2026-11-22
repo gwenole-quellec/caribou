@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — explore carbon-budget allocation for research travel.
+"""CARIBOU — Explore carbon-budget allocation for research travel.
 
 Simulates individual (lambda=0), hybrid (0<lambda<1), and fully pooled team budgets using observed
 research-travel missions. For each sampled prioritization rule, pooling fraction, and
@@ -24,6 +24,7 @@ import json
 import math
 import sys
 from dataclasses import asdict, dataclass
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -949,8 +950,11 @@ def print_progress(
 # Experiment execution
 # ==================================================================================================
 
-def run(args: argparse.Namespace) -> list[Path]:
-    """Run paired pooling-level experiments and write one JSON per target."""
+def run(
+    args: argparse.Namespace,
+    progress: Callable[[int, int], None] | None = None,
+) -> list[Path]:
+    """Run experiments, reporting progress to a callback or the CLI."""
     if args.draws < 1 or args.grid < 5 or args.refine < 0:
         raise ValueError("draws>=1, grid>=5, refine>=0 required")
     if not 0 < args.severity_threshold <= 1:
@@ -982,16 +986,18 @@ def run(args: argparse.Namespace) -> list[Path]:
     progress_steps = len(args.targets) * len(args.lambdas)
     last_step = 0
 
-    print(
-        f"{data.metadata['missions_included']} missions; "
-        f"{data.people} travelers; "
-        f"{data.total / 1000:.1f} t CO2e"
-    )
-    print(
-        f"{len(args.targets)} targets x {len(args.lambdas)} pooling fractions "
-        f"= {progress_steps} configurations, {args.draws} rules each"
-    )
-    print_progress(0, progress_steps)
+    report_progress = progress if progress is not None else print_progress
+    if progress is None:
+        print(
+            f"{data.metadata['missions_included']} missions; "
+            f"{data.people} travelers; "
+            f"{data.total / 1000:.1f} t CO2e"
+        )
+        print(
+            f"{len(args.targets)} targets x {len(args.lambdas)} pooling fractions "
+            f"= {progress_steps} configurations, {args.draws} rules each"
+        )
+    report_progress(0, progress_steps)
 
     # Each rule uses the SAME random effects at ALL pooling levels. Calibration
     # shares initial budget evaluations across all requested carbon targets.
@@ -1024,7 +1030,7 @@ def run(args: argparse.Namespace) -> list[Path]:
             new_step = completed_operations * progress_steps // total_operations
             if new_step > last_step:
                 for step in range(last_step + 1, new_step + 1):
-                    print_progress(step, progress_steps)
+                    report_progress(step, progress_steps)
                 last_step = new_step
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -1038,7 +1044,8 @@ def run(args: argparse.Namespace) -> list[Path]:
             json.dumps(report, indent=2, allow_nan=False), encoding="utf-8"
         )
         paths.append(path)
-        print(f"Wrote {path}")
+        if progress is None:
+            print(f"Wrote {path}")
 
     return paths
 
@@ -1101,4 +1108,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

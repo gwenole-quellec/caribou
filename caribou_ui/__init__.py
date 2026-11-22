@@ -2,4 +2,3 @@
 # Copyright (c) 2026 CARIBOU contributors
 
 """CARIBOU — Streamlit forms and visualizations for CARIBOU."""
-

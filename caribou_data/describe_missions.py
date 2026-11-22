@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — summarize eligible research-travel missions.
+"""CARIBOU — Summarize eligible research-travel missions.
 
 Reads the 'missions' worksheet from carbon_footprint.xlsx, using the same eligibility criteria as
 explore_budget_allocation.py: missions without a team are always ignored, and specified mission types
@@ -149,7 +149,7 @@ def summarize(df: pd.DataFrame, period: str) -> dict:
         "period": period,
         "missions": int(len(df)),
         "travelers": int(df["person_id"].astype(str).nunique()),
-        "teams": int(df["team"].astype(str).nunique()),
+        "teams": int(df["team"].astype("string").fillna("").str.strip().replace("", pd.NA).nunique()),
         "emissions_t": float(costs.sum() / 1000),
         "median_kg": float(q50),
         "q25_kg": float(q25),
@@ -362,4 +362,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

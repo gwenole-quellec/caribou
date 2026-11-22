@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — visualize the trade-off between mission preservation and severe
+"""CARIBOU — Visualize the trade-off between mission preservation and severe
 travel restrictions under budget pooling.
 
 For each carbon-reduction target, this figure shows how pooling changes two
@@ -332,4 +332,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

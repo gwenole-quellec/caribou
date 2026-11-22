@@ -1,101 +1,73 @@
-# CARIBOU
+# 🦌 CARIBOU
 
-<p align="center"><img src="logo_caribou.png" alt="CARIBOU logo" width="300"></p>
+<p align="center"><img src="caribou.png" alt="CARIBOU logo" width="300"></p>
 
-**Explore carbon budgets for research travel.**
+**One team. Many trips. Shared carbon budgets.**
 
-CARIBOU turns travel records into a carbon footprint you can explore, then compares how individual and shared team budgets would affect those missions. Prepare your data in a browser, inspect the charts, and test different carbon-reduction targets.
+CARIBOU helps research teams understand their travel emissions and explore how carbon budgets could affect their missions. It turns travel records into complete missions, makes their footprint visible, and compares individual and shared team budgets at different emission-reduction targets.
 
-*Carbon Allocation for Research trIps: Budget Optimization and Utilization*
+It runs locally in your browser. Your data and results stay in the current session until you download them.
+
+## What you can do
+
+- **Prepare your travel data:** import an Excel workbook, match your columns, and combine travel segments into complete missions.
+- **Estimate emissions:** use existing estimates or calculate them from departure and arrival cities, countries and transportation modes. Plane, train, car, taxi and intercity coach travel are supported, with optional round-trip settings.
+- **Explore your footprint:** filter charts by year, team or mission purpose, and generate a dataset summary and emissions histogram.
+- **Compare carbon budgets:** choose reduction targets and explore how individual and pooled team budgets affect mission preservation and the distribution of restrictions.
+- **Share the results:** preview figures and tables, then download Excel inputs, JSON simulation reports, PNG/PDF figures and Markdown/LaTeX tables.
 
 ## Get started
 
-Requires Python 3.10+. From the repository root:
+Requires Python 3.10+ and Python virtual-environment support. No API key is needed.
+
+On Linux:
 
 ```bash
-pip install -r requirements-ui.txt
-streamlit run caribou.py
+git clone https://github.com/gwenole-quellec/caribou.git
+cd caribou
+./start.sh
 ```
 
-## From Excel to insights
+Dependencies are installed automatically on first launch and updated when the requirements files change.
 
-Choose the preparation mode that fits your data:
-
-| Tab | Start with | What happens |
-|---|---|---|
-| **Simple preparation** | Travel records with emissions already calculated | Map your columns, validate and export. |
-| **Advanced preparation** | Travel records with cities, countries and transportation modes | Map your columns; CARIBOU estimates emissions and prepares complete missions. |
-| **Visualization** | The result of either mode | Explore emissions over time, by team and mission type, and across missions. |
-
-Both preparation modes export **`carbon_footprint.xlsx`**, ready for simulation. No download and reimport is needed to view the charts.
-
-If your workbook has several segments per mission, combine them using their shared mission ID. CARIBOU adds their emissions and keeps the earliest departure date. This option is enabled by default in advanced mode.
-
-In advanced mode, choose a round-trip column or apply one setting to all rows. **One-way is the default**; round trips double the estimate. Leave this off when return segments are already separate rows. Taxi estimates additionally include an assumed empty vehicle return.
-
-Advanced mode supports plane, train, car, taxi and intercity coach travel, with editable French and English labels. Estimates use distance-based factors adapted from [GES 1point5](https://doi.org/10.1088/2634-4505/ac84a4). Online geocoding sends city/country pairs to OpenStreetMap Nominatim; save the downloadable cache to reuse coordinates or work offline. Car and taxi estimates are per vehicle, without automatic passenger sharing.
-
-## What your data needs
-
-The app maps your column names to this simulation format: a worksheet named **`missions`**, with one row per complete mission.
-
-| Column | Content |
-|---|---|
-| `mission_id` | Unique mission ID across travelers and years. |
-| `year` | Departure year; the app can derive it from the date. |
-| `person_id` | Traveler ID, stable across years. |
-| `team` | Research team. |
-| `mission_type` | Purpose; may be blank. Multiple purposes are joined with commas. |
-| `start_date` | Departure date. |
-| `emissions_kg_co2e` | Total mission emissions in kg CO₂e, finite and nonnegative. |
-
-Store IDs as text in Excel to preserve leading zeros. When combining segments, traveler, team and year must match. Advanced mode also needs origin/destination cities and countries, plus a transportation mode; emissions are calculated for you.
-
-Simple preparation keeps missions without a team in the export and charts. Advanced preparation and simulations ignore them. Team sizes in simulations count eligible travelers, not complete personnel rosters.
-
-The confidential study workbook is not distributed with the code.
-
-## Run simulations
-
-Data preparation and charts run in the browser; simulations currently run from the command line. For command-line use only, install `requirements.txt`.
+Alternatively, on other operating systems:
 
 ```bash
-# Summarize the dataset
-python -m caribou_data.describe_missions --input carbon_footprint.xlsx
-
-# Compare carbon budgets at four reduction targets
-python -m caribou_simulation.explore_budget_allocation \
-    --input carbon_footprint.xlsx \
-    --targets 5 10 15 20 --draws 10000 --seed 42
-
-# Generate figures and a summary table
-python -m caribou_simulation.fig_missions
-python -m caribou_simulation.fig_restrictions
-python -m caribou_simulation.fig_governance
-python -m caribou_simulation.fig_tradeoff
-python -m caribou_simulation.table_outcomes --lambda 0.5
+git clone https://github.com/gwenole-quellec/caribou.git
+cd caribou
+python -m pip install -r requirements-ui.txt
+python -m streamlit run caribou.py
 ```
 
-Figures and tables go to **`artifacts/`**; simulation reports go to **`artifacts/results/`**. Output paths are configurable. For a quick trial, use `--draws 100`.
+Open [http://localhost:8501](http://localhost:8501).
 
-To exclude a purpose, add `--exclude-mission-types research_administration` to both the dataset summary and simulation commands. A match on any comma-separated purpose excludes the whole mission. Use `--help` with any command for more options.
+1. **Prepare:** choose **Simple preparation** if emissions are already available, or **Advanced preparation** to estimate them from travel records. Download `carbon_footprint.xlsx`, ready for simulation.
+2. **Visualize:** inspect your prepared missions and generate a descriptive table and histogram. Chart filters do not change the simulation input.
+3. **Simulate:** use the prepared data or upload a missions workbook. Adjust the targets and sampling settings, then follow the progress bar.
+4. **Export:** open **Artifacts** to generate, preview and download the simulation figures and outcome table.
 
-## Read the results
+Already have a CARIBOU missions workbook? Go straight to **Simulation**. Already have simulation reports? Upload them in **Artifacts**.
 
-CARIBOU explores **sensitivity to hypothetical allocation rules**, rather than prescribing a policy. Pooling ranges from individual budgets (`λ = 0`) to fully shared team budgets (`λ = 1`), across five prioritization families: cost, distributive, longitudinal, random and sequential.
+## Designed for research travel
 
-Reduction targets are matched in expectation, mixing complete-mission allocations when needed. Reported medians and ranges describe variation across sampled rules, not confidence intervals. Comparisons with no pooling are paired within each rule; they do not establish causal effects.
+Each mission has a unique ID and a stable traveler ID. Segments belonging to the same mission can be combined: emissions are added, the earliest departure date is retained, and distinct purposes are joined. The exported `missions` sheet contains `mission_id`, `year`, `person_id`, `team`, `mission_type`, `start_date` and `emissions_kg_co2e`.
 
-## Project layout
+Missions without a team remain in the prepared workbook and charts, but are excluded from simulations. Simulated team sizes count eligible travelers, not complete staff rosters.
 
-- `caribou.py` — Streamlit entry point.
-- `caribou_data/` — data preparation, emissions and dataset description.
-- `caribou_ui/` — forms and visualizations.
-- `caribou_simulation/` — simulations and results reporting.
-- `artifacts/` — generated outputs.
+Emissions estimates use geographic distances and transportation factors adapted from [GES 1point5](https://doi.org/10.1088/2634-4505/ac84a4). Online geocoding sends city/country pairs to OpenStreetMap Nominatim; download the coordinate cache to reuse it or work offline. Round trips double the one-way estimate. Taxi estimates also include an empty vehicle return; car and taxi estimates are per vehicle.
 
-The emissions engine is an importable module, `caribou_data.carbon_footprint`, without a CLI.
+## Scenarios, not predictions
 
-## License
+CARIBOU compares hypothetical prioritization rules to support discussion and sensitivity analysis. It does not prescribe a policy or predict individual decisions. Reported ranges describe variation across sampled rules, not confidence intervals. Carbon-reduction targets are matched in expectation while keeping missions indivisible.
 
-[BSD 3-Clause](LICENSE).
+The default simulation tests reductions of **5, 10, 15 and 20%**, with **10,000 sampled rules**, **seed 42** and no mission-purpose exclusions. Try fewer rules for a quick run. Keep per-rule results enabled and the default targets and pooling fractions to generate all standard artifacts.
+
+## Local and open source
+
+Download the workbooks, reports and figures you want to keep before closing or restarting the app. There is no persistent database or automatic project-folder backup. Never commit identifying travel records or geocoding caches to a public repository. The confidential study workbook is not included.
+
+Command-line simulations and reporting remain available through `python -m caribou_simulation.<module>` and `python -m caribou_data.describe_missions`; use `--help` for options. Command-line outputs default to `artifacts/`, with simulation JSON reports in `artifacts/results/`.
+
+*CARIBOU: Carbon Allocation for Research trIps: Budget Optimization and Utilization.*
+
+License: [BSD 3-Clause](LICENSE).

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — summarize travel restrictions in a publication table.
+"""CARIBOU — Summarize travel restrictions in a publication table.
 
 Reports four restriction indicators for expected carbon-reduction targets of 5%, 10%, 15%, and 20%,
 at a selected pooling fraction.
@@ -295,4 +295,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

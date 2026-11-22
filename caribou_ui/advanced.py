@@ -20,9 +20,28 @@ def render_advanced():
     """Render an independent advanced workflow with session-local results."""
     st.subheader("Estimate emissions from travel segments")
     st.caption(
-        "Uses the same distances and emission factors as caribou_data.carbon_footprint. "
-        "Each row describes one travel segment, optionally including its return journey."
+        "Upload travel records to estimate emissions from departure and arrival locations and "
+        "transportation modes. Each row should describe one travel segment; use the round-trip "
+        "settings if it also includes the return journey."
     )
+    st.caption(
+        "Match your columns below. CARIBOU calculates emissions, combines segments into complete "
+        "missions when selected, and prepares your data for visualization and simulation."
+    )
+    with st.expander("How it works"):
+        st.write(
+            "Distances between cities are adjusted by transportation mode and multiplied by "
+            "emission factors adapted from GES 1point5. These are estimates, not measured emissions. "
+            "A round trip doubles the one-way estimate; do not enable it when return segments "
+            "are already separate rows. Taxi estimates also include an empty vehicle return. "
+            "Car and taxi emissions are per vehicle, without automatic sharing between passengers."
+        )
+        st.write(
+            "Both preparation modes retain missions without a team in the workbook and charts; "
+            "simulations exclude them. Online "
+            "geocoding sends city/country pairs to OpenStreetMap Nominatim. Download the cache "
+            "to reuse coordinates or work offline."
+        )
     upload = st.file_uploader(
         "Travel workbook (.xlsx)", type=["xlsx"], key="advanced-upload"
     )
@@ -164,6 +183,9 @@ def render_advanced():
 
     if st.button("Calculate emissions", type="primary", key=prefix + "-calculate"):
         st.session_state.pop("advanced-emission-result", None)
+        bar = st.progress(0, text="Preparing OpenStreetMap requests…")
+        status = st.empty()
+        status.info("Validating mission information…")
         try:
             # Validate metadata before any network request. Emissions are checked
             # after calculation; placeholders only enable metadata validation here.
@@ -172,21 +194,32 @@ def render_advanced():
                 mission_mapping,
                 aggregate=aggregate,
                 dayfirst=dayfirst,
+                keep_empty_teams=True,
             )
             if metadata_errors:
                 raise ValueError(" ".join(metadata_errors))
-            team = (
-                source[mission_mapping["team"]].astype("string").fillna("").str.strip()
-            )
-            ignored_rows = [
-                int(header) + 1 + pos
-                for pos, missing in enumerate(team.eq(""))
-                if missing
-            ]
             if not offline and not user_agent.strip():
                 raise ValueError(
                     "Provide a geocoding User-Agent for online calculation."
                 )
+            last_stage = None
+
+            def update(stage, completed, total):
+                nonlocal last_stage
+                if stage == "geocoding":
+                    if total:
+                        bar.progress(
+                            int(100 * completed / total),
+                            text=f"OpenStreetMap requests: {completed}/{total}",
+                        )
+                        status.info("Resolving uncached locations…")
+                    else:
+                        bar.empty()
+                        status.info("No OpenStreetMap requests needed (cached locations or offline mode).")
+                elif last_stage != stage:
+                    status.info("Calculating emissions…" if stage == "emissions" else "Preparing workbook and error report…")
+                last_stage = stage
+
             with st.spinner("Estimating emissions and resolving uncached locations…"):
                 result = calculate(
                     raw,
@@ -194,15 +227,18 @@ def render_advanced():
                     mapping,
                     aliases,
                     header=int(header),
-                    ignored_rows=ignored_rows,
                     round_trip_column=round_trip_column,
                     always_round_trip=always_round_trip,
                     cache_bytes=cache_bytes,
                     offline=offline,
                     user_agent=user_agent.strip(),
+                    progress=update,
                 )
             st.session_state["advanced-emission-result"] = (signature, result)
+            status.success("Calculation complete — review the results below.")
         except Exception as exc:
+            bar.empty()
+            status.empty()
             st.error(f"Unable to calculate emissions: {exc}")
 
     saved = st.session_state.get("advanced-emission-result")
@@ -242,7 +278,6 @@ def render_advanced():
         BytesIO(result.workbook), sheet_name=sheet, header=int(header) - 1, dtype=object
     )
     missions, errors = prepare(
-        enriched, mission_mapping, aggregate=aggregate, dayfirst=dayfirst
+        enriched, mission_mapping, aggregate=aggregate, dayfirst=dayfirst, keep_empty_teams=True
     )
     return render_validated(missions, errors, prefix + "-result")
-

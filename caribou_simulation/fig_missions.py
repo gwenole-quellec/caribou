@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — visualize mission refusals under carbon-budget pooling.
+"""CARIBOU — Visualize mission refusals under carbon-budget pooling.
 
 For each carbon-reduction target, plot the median number of refused missions per 100 requests across
 sampled prioritization rules, with 25th–75th percentile bands.
@@ -256,4 +256,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

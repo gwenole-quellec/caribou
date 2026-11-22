@@ -179,10 +179,15 @@ def resolve_locations(
     cache_path: Path,
     offline: bool,
     user_agent: str,
+    progress=None,
 ) -> dict[str, str]:
     """Resolve distinct locations once, preserving successful results even after an error."""
     failed_locations: dict[str, str] = {}
     last_request_time: float | None = None
+    total_requests = sum(key not in cache for key in places) if not offline else 0
+    completed_requests = 0
+    if progress:
+        progress(0, total_requests)
     try:
         for key, (city, country) in sorted(places.items()):
             if key in cache:
@@ -201,6 +206,9 @@ def resolve_locations(
                     cache[key] = result
             except (HTTPError, URLError, TimeoutError, ValueError, KeyError) as exc:
                 failed_locations[key] = "geocoding_error: " + str(exc)[:150]
+            completed_requests += 1
+            if progress:
+                progress(completed_requests, total_requests)
     finally:
         save_cache(cache_path, cache)
     return failed_locations
@@ -319,4 +327,3 @@ def evaluate_leg(
     if footprint is None:
         problems.append("identical_or_zero_distance_locations")
     return footprint, problems
-

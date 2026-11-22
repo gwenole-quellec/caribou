@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — visualize the distribution of travel restrictions.
+"""CARIBOU — Visualize the distribution of travel restrictions.
 
 For four carbon-reduction targets (rows) and four pooling fractions (columns), each pictogram
 represents 100 active traveler-year equivalents, divided into three categories:
@@ -375,4 +375,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
