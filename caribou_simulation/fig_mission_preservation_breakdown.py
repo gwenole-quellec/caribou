@@ -21,7 +21,7 @@ Example of settings.json:
 
   {
     "by_mission_type": {
-      "hidden": ["Research administration", "Unknown"],
+      "hidden": ["Administration de la recherche", "Inconnu"],
       "labels": {
         "Collaboration": "Collaboration",
         "Colloque-Congrès": "Conferences",

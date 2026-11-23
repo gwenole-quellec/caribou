@@ -11,7 +11,7 @@ It runs locally in your browser. Your data and results stay in the current sessi
 ## What you can do
 
 - **Prepare your travel data:** import an Excel workbook, match your columns, and combine travel segments into complete missions.
-- **Estimate emissions:** use existing estimates or calculate them from departure and arrival cities, countries and transportation modes. Plane, train, car, taxi and intercity coach travel are supported, with optional round-trip settings.
+- **Estimate emissions:** use existing estimates or calculate them from travel locations and transportation modes, with optional round-trip settings.
 - **Explore your footprint:** filter charts by year, team or mission purpose, and generate a dataset summary and emissions histogram.
 - **Compare carbon budgets:** choose reduction targets and explore how individual and pooled team budgets affect mission preservation and the distribution of restrictions.
 - **Share the results:** preview figures and tables, then download Excel inputs, JSON simulation reports, PNG/PDF figures and Markdown/LaTeX tables.
@@ -50,29 +50,27 @@ Already have a CARIBOU missions workbook? Go straight to **Simulation**. Already
 
 ## Designed for research travel
 
-Each mission has a unique ID and a stable traveler ID. Segments belonging to the same mission can be combined: emissions are added, the earliest departure date is retained, and distinct purposes are joined. The exported `missions` sheet contains `mission_id`, `year`, `person_id`, `team`, `mission_type`, `start_date` and `emissions_kg_co2e`.
+Each mission has a unique ID and each traveler a stable ID. Combining segments sums their emissions, keeps the earliest departure date and joins their purposes. The exported `missions` sheet is ready for simulation.
 
 Mission-type exclusions match complete labels; mixed-purpose missions remain included unless their full label is selected.
 
 Missions without a team remain in the prepared workbook and charts, but are excluded from simulations. Simulated team sizes count eligible travelers, not complete staff rosters.
 
-Emissions estimates use geographic distances and transportation factors adapted from [GES 1point5](https://doi.org/10.1088/2634-4505/ac84a4). Online geocoding sends city/country pairs to OpenStreetMap Nominatim; download the coordinate cache to reuse it or work offline. Round trips double the one-way estimate. Taxi estimates also include an empty vehicle return; car and taxi estimates are per vehicle.
+Emissions use geographic distances and transportation factors adapted from [GES 1point5](https://doi.org/10.1088/2634-4505/ac84a4). Geocoding sends city/country pairs to OpenStreetMap Nominatim; save the cache to reuse coordinates offline. Round trips double emissions; taxi estimates also include an empty vehicle return. Car and taxi estimates are per vehicle.
 
 ### Restriction rates by category
 
-Compare mission refusal rates by purpose and personnel category. Map your staff-category column to `personnel_category` during preparation. A mission with several purposes contributes to each purpose; the categorical strategy prioritizes these categories using sampled weights.
-
-Categorical rules combine personnel-category weights and mean mission-purpose weights. Missing categories are neutral; random draws only break ties within this family. In **Artifacts**, generate **Mission preservation by category** to compare 20% and 50% pooling with no pooling; hide categories or rename their labels in the figure settings.
+Compare refusal rates by mission purpose and personnel category; map your staff-category column to `personnel_category` during preparation. Missions with several purposes contribute to each purpose. In **Artifacts**, **Mission preservation by category** shows the effects of 20% and 50% pooling, with options to hide or rename categories.
 
 ## Scenarios, not predictions
 
-CARIBOU compares hypothetical prioritization rules to support discussion and sensitivity analysis. It does not prescribe a policy or predict individual decisions. Reported ranges describe variation across sampled rules, not confidence intervals. Carbon-reduction targets are matched in expectation while keeping missions indivisible.
+CARIBOU compares hypothetical prioritization rules to support discussion, not prescribe policy or predict decisions. Ranges reflect variation across sampled rules, not confidence intervals. Reduction targets are matched in expectation; missions remain indivisible.
 
 The default simulation tests reductions of **5, 10, 15 and 20%**, with **10,000 sampled rules**, **seed 42** and no mission-purpose exclusions. Try fewer rules for a quick run. Keep per-rule results enabled and the default targets and pooling fractions to generate all standard artifacts.
 
 ## Local and open source
 
-Download the workbooks, reports and figures you want to keep before closing or restarting the app. Large reports use temporary session files to keep memory use low. There is no persistent database or automatic project-folder backup. Never commit identifying travel records or geocoding caches to a public repository. The confidential study workbook is not included.
+Download your results before closing or restarting the app: session data and temporary files are not a project backup. Never commit identifying travel records or geocoding caches to a public repository.
 
 Command-line simulations and reporting remain available through `python -m caribou_simulation.<module>` and `python -m caribou_data.describe_missions`; use `--help` for options. Command-line outputs default to `artifacts/`, with simulation JSON reports in `artifacts/results/`.
 
