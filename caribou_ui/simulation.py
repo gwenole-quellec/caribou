@@ -20,9 +20,40 @@ from caribou_simulation.explore_budget_allocation import (
 from caribou_simulation.workflow import simulate_workbook
 
 
+# ==================================================================================================
+# Utility functions
+# ==================================================================================================
+
 def number_list(text):
     """Read comma- or whitespace-separated numeric settings."""
     return [float(value) for value in re.split(r"[\s,;]+", text.strip()) if value]
+
+
+def render_breakdowns(reports):
+    """Show the two additive category indicators from simulation reports."""
+    rows = {"by_mission_type": [], "by_personnel_category": []}
+    for content in reports.values():
+        report = json.loads(content)
+        for pooling, summary in report["summary_by_lambda"].items():
+            for section, categories in summary["breakdowns"].items():
+                for category, values in categories.items():
+                    rate = values["refused_missions_percent"]
+                    paired = values.get("paired_difference_from_lambda_0_percentage_points", {})
+                    rows[section].append({
+                        "Reduction target (%)": report["target_reduction_percent"],
+                        "Pooling fraction": float(pooling),
+                        "Category": category,
+                        "Requested missions": values["requested_missions"],
+                        "Refused missions (%) — median": rate["median"],
+                        "p05": rate["p05"], "p95": rate["p95"],
+                        "Paired change from no pooling (pp) — median": paired.get("median"),
+                    })
+    for section, title in [("by_mission_type", "Refused missions by mission purpose"),
+                           ("by_personnel_category", "Refused missions by personnel category")]:
+        if rows[section]:
+            with st.expander(title):
+                st.caption("Rates are within each category, using eligible missions. Purpose groups can overlap; missing labels are Not specified. Ranges describe sampled rules, not confidence intervals.")
+                st.dataframe(rows[section], use_container_width=True)
 
 
 def render_simulation(available):
@@ -69,7 +100,7 @@ def render_simulation(available):
     exclusions = st.text_area(
         "Mission types to exclude (optional, one per line)",
         value="",
-        help='One purpose per line, matched without regard to capitalization. If a mission has several comma-separated purposes, matching any one excludes the entire mission.', key="simulation-exclusions",
+        help='One complete mission-type label per line, ignoring capitalization and surrounding whitespace. Combined labels remain included unless specified in full.', key="simulation-exclusions",
     )
     st.caption(
         "Leave exclusions empty to include all mission types. Missions without a team are always ignored by the simulator."
@@ -218,6 +249,7 @@ def render_simulation(available):
     st.caption(
         "Medians and ranges describe sensitivity across hypothetical rules, not confidence intervals or predictions."
     )
+    render_breakdowns(reports)
     st.download_button(
         "Download all simulation results (.zip)",
         archive,

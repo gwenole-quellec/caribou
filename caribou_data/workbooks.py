@@ -22,6 +22,7 @@ COLUMNS = [
     "start_date",
     "emissions_kg_co2e",
 ]
+OPTIONAL_COLUMNS = ["personnel_category"]
 ALIASES = {
     "mission_id": ["mission", "id mission", "numero mission"],
     "year": ["annee"],
@@ -34,7 +35,7 @@ ALIASES = {
 
 
 # ==================================================================================================
-# Utilities
+# Utility functions
 # ==================================================================================================
 
 def normalized(value):
@@ -75,7 +76,7 @@ def combine_mission_types(values):
 
 
 # ==================================================================================================
-# Data preparation
+# Data preparation and export
 # ==================================================================================================
 
 def prepare(
@@ -97,7 +98,10 @@ def prepare(
         return pd.DataFrame(columns=COLUMNS), [
             "A source column cannot be mapped to multiple fields."
         ]
-    df = pd.DataFrame({c: source[mapping[c]].copy() for c in COLUMNS if mapping.get(c)})
+    optional = [c for c in OPTIONAL_COLUMNS if mapping.get(c)]
+    df = pd.DataFrame({c: source[mapping[c]].copy() for c in COLUMNS + optional if mapping.get(c)})
+    for c in optional:
+        df[c] = df[c].astype("string").fillna("").str.strip()
     if "mission_type" not in df:
         df["mission_type"] = ""
     for c in ["mission_id", "person_id", "team", "mission_type"]:
@@ -160,7 +164,21 @@ def prepare(
                 errors.append(
                     f"Inconsistent segments: multiple values of {c} for the same mission."
                 )
+        for c in optional:
+            values_by_mission = df.groupby("mission_id")[c].agg(
+                lambda values: list(dict.fromkeys(value for value in values if value))
+            )
+            for mission_id, values in values_by_mission.items():
+                if len(values) > 1:
+                    errors.append(
+                        f"Inconsistent segments: mission_id={mission_id!r} has "
+                        f"multiple values of {c}: {', '.join(repr(value) for value in values)}."
+                    )
         if not errors:
+            optional_values = {
+                c: df.groupby("mission_id")[c].agg(lambda values: next((value for value in values if value), ""))
+                for c in optional
+            }
             df = df.groupby("mission_id", as_index=False).agg(
                 year=("year", "first"),
                 person_id=("person_id", "first"),
@@ -169,13 +187,15 @@ def prepare(
                 start_date=("start_date", "min"),
                 emissions_kg_co2e=("emissions_kg_co2e", "sum"),
             )
+            for c, values in optional_values.items():
+                df[c] = df["mission_id"].map(values)
     elif df.mission_id.duplicated().any():
         errors.append(
             "Duplicate mission identifiers: enable segment grouping if appropriate."
         )
     if not errors:
         df["year"] = df.year.astype(int)
-    result = df[COLUMNS].copy()
+    result = df[COLUMNS + optional].copy()
     result.attrs["ignored_no_team_rows"] = ignored_rows
     result.attrs["kept_no_team_rows"] = (
         int(missing_team.sum()) if keep_empty_teams else 0
@@ -187,7 +207,7 @@ def export_workbook(df):
     output = BytesIO()
     # Prevent spreadsheet applications from interpreting source text as formulas.
     safe = df.copy()
-    for c in ["mission_id", "person_id", "team", "mission_type"]:
+    for c in ["mission_id", "person_id", "team", "mission_type", *[name for name in OPTIONAL_COLUMNS if name in safe]]:
         safe[c] = safe[c].map(
             lambda v: (
                 "'" + v

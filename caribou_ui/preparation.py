@@ -4,7 +4,7 @@
 """CARIBOU — Shared mission mapping, validation and export for both preparation modes."""
 
 import streamlit as st
-from caribou_data.workbooks import COLUMNS, prepare, export_workbook
+from caribou_data.workbooks import COLUMNS, OPTIONAL_COLUMNS, prepare, export_workbook
 
 
 # ==================================================================================================
@@ -12,6 +12,7 @@ from caribou_data.workbooks import COLUMNS, prepare, export_workbook
 # ==================================================================================================
 
 FIELD_HELP = {
+    "personnel_category": "Optional personnel category, such as the source Statut column. Used only to describe refusal rates; never changes budgets or priorities. Leave unmapped if unavailable.",
     "mission_id": "Identifies one complete mission for one traveler. It must be unique across people and years. Segments of that mission share this ID.",
     "year": "Departure year. Leave unmapped to derive it from start_date; mapped values must match the date.",
     "person_id": "Stable traveler identifier across all years. Store IDs as text in Excel to preserve leading zeros.",
@@ -23,7 +24,7 @@ FIELD_HELP = {
 
 
 # ==================================================================================================
-# Utilities
+# Utility functions
 # ==================================================================================================
 
 def mission_controls(source, context, calculated_emissions=False):
@@ -31,11 +32,11 @@ def mission_controls(source, context, calculated_emissions=False):
     st.caption(
         "Required: mission ID, traveler ID, team column and departure date"
         + ("." if calculated_emissions else ", plus emissions.")
-        + " Year can be derived from the date; mission type may remain blank. "
+        + " Year can be derived from the date; mission type and personnel category may remain blank. "
         "Use stable traveler IDs and store identifiers as text in Excel to preserve leading zeros."
     )
     mapping = {}
-    for field in COLUMNS:
+    for field in COLUMNS + OPTIONAL_COLUMNS:
         if calculated_emissions and field == "emissions_kg_co2e":
             mapping[field] = "carbon footprint"
             continue

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — Streamlit controls for estimating emissions from travel segments."""
+"""CARIBOU — Streamlit controls for preparing the workbook."""
 
 from hashlib import sha256
 from io import BytesIO
@@ -12,9 +12,69 @@ import pandas as pd
 import streamlit as st
 
 from caribou_data.emissions import FIELDS, MODE_ALIASES, calculate
-from caribou_ui.preparation import mission_controls, render_validated
+from caribou_ui.preparation import mission_controls, render_missions, render_validated
 from caribou_data.workbooks import prepare
 
+
+# ==================================================================================================
+# Rendering function (Simple preparation)
+# ==================================================================================================
+
+def render_simple():
+    """Prepare existing emissions and return validated missions, or None.
+
+    Worksheet selection and the preview belong here. Column mapping, mission
+    aggregation, validation and workbook export are delegated to render_missions.
+    """
+    st.subheader("Prepare missions from existing emissions")
+    st.caption(
+        "Upload an Excel workbook with emissions already calculated. Each row may be a complete "
+        "mission or a travel segment to combine. Match your columns below, then download the "
+        "validated missions workbook or continue directly to Visualization and Simulation."
+    )
+    upload = st.file_uploader(
+        "Consolidated Excel workbook", type=["xlsx"], key="simple-upload"
+    )
+    if upload is None:
+        st.info(
+            "Upload a workbook with previously estimated emissions. Mission identifiers "
+            "must be unique across travelers and years; traveler identifiers must remain stable."
+        )
+        return None
+
+    # Scope widget state to the uploaded content so a new workbook does not
+    # inherit worksheet or mapping choices from a different file.
+    raw = upload.getvalue()
+    key = "simple-" + sha256(raw).hexdigest()[:16]
+    try:
+        with pd.ExcelFile(BytesIO(raw), engine="openpyxl") as book:
+            sheet = st.selectbox(
+                "Source worksheet", book.sheet_names, key=f"sheet-{key}"
+            )
+            header = st.number_input(
+                "Header row", min_value=1, value=1, step=1, key=f"header-{key}-{sheet}"
+            )
+            # The interface numbers rows from 1; pandas numbers them from 0.
+            # Read as objects to avoid forcing mixed source columns to one type.
+            source = pd.read_excel(
+                book, sheet_name=sheet, header=int(header) - 1, dtype=object
+            )
+    except Exception as exc:
+        st.error(f"Unable to read the workbook: {exc}")
+        return None
+
+    # Limit only the preview; preparation receives every source row.
+    st.dataframe(source.head(100), use_container_width=True)
+    st.caption(
+        f"{len(source)} rows; preview limited to the first 100. Empty rows are not automatically removed."
+    )
+    # Include the worksheet and header in the context to separate mapping state.
+    return render_missions(source, f"{key}-{sheet}-{header}")
+
+
+# ==================================================================================================
+# Rendering function (Advanced preparation)
+# ==================================================================================================
 
 def render_advanced():
     """Render an independent advanced workflow with session-local results."""

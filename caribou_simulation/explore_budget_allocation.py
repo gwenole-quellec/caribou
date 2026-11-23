@@ -32,9 +32,13 @@ import pandas as pd
 from numba import njit
 from scipy.stats import qmc
 
+from caribou_simulation.breakdowns import (
+    DEFINITIONS, build_groups, restriction_breakdowns, interpolate_breakdowns, summarize_breakdowns,
+)
+
 
 # ==================================================================================================
-# Constants and experimental configuration
+# Configuration
 # ==================================================================================================
 
 VERSION = "1.0.0"
@@ -158,6 +162,7 @@ class Missions:
     team_groups: dict[tuple[int, int], tuple[np.ndarray, int]]
     total: float
     metadata: dict
+    category_groups: dict
     year_offsets: np.ndarray | None = None
     team_headcounts: np.ndarray | None = None
 
@@ -193,9 +198,7 @@ def load_missions(
     df["mission_type"] = df["mission_type"].astype("string").fillna("").str.strip()
     types = df["mission_type"].str.casefold()
     # Count each excluded mission once: missing team takes precedence.
-    excluded_type_mask = (~missing_team_mask) & types.map(
-        lambda value: any(part.strip() in excluded_types for part in value.split(","))
-    )
+    excluded_type_mask = (~missing_team_mask) & types.isin(excluded_types)
     eligible_mask = ~(missing_team_mask | excluded_type_mask)
 
     df = df.loc[eligible_mask].copy()
@@ -291,6 +294,7 @@ def load_missions(
         team_groups=team_groups,
         total=float(cost.sum()),
         metadata=metadata,
+        category_groups=build_groups(df),
     )
 
 
@@ -698,6 +702,7 @@ def calibrate(
     """
     top = upper_budget(data, pooling, rule)
     cache: dict[float, tuple[float, dict]] = {}
+    breakdown_cache = {}
 
     def observe(budget: float) -> None:
         budget = round(max(0.0, float(budget)), CALIBRATION_BUDGET_DECIMALS)
@@ -707,6 +712,7 @@ def calibrate(
         accepted = simulate(
             data, pooling, rule, budget, person_effect, mission_noise
         )
+        breakdown_cache[budget] = restriction_breakdowns(data.category_groups, accepted)
         reduction = 100 * (1 - data.cost[accepted].sum() / data.total)
         cache[budget] = (
             float(reduction),
@@ -797,6 +803,7 @@ def calibrate(
             "achieved_reduction_percent": float(expected_reduction),
             "target_gap_percentage_points": float(expected_reduction - target),
             "metrics": expected_metrics,
+            "breakdowns": interpolate_breakdowns(breakdown_cache[b1], breakdown_cache[b2], weight),
             "interpolation": {
                 "method": "lottery_between_two_whole_mission_allocations",
                 "lower_reduction_percent": r1,
@@ -894,10 +901,12 @@ def create_report(
                 for name in METRICS
             }
 
+        entry["breakdowns"] = summarize_breakdowns(records, key, zero if has_zero else None, describe)
         by_lambda[key] = entry
 
     return {
         "schema_version": SCHEMA_VERSION,
+        "breakdown_definitions": DEFINITIONS,
         "software_version": VERSION,
         "target_reduction_percent": target,
         "pooling_fractions": list(args.lambdas),
@@ -1067,7 +1076,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/results"))
     parser.add_argument(
         "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
-        help="Mission types to exclude (case-insensitive); missions without a team are always excluded",
+        help="Complete mission-type labels to exclude (case-insensitive); combined labels must be specified in full; missions without a team are always excluded",
     )
     parser.add_argument(
         "--targets", type=float, nargs="+", default=list(DEFAULT_TARGETS)

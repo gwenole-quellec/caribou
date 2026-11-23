@@ -17,6 +17,27 @@ def render_description(frame, context):
         "view. Missions without a team are retained but do not count as an extra team. Simulation "
         "excludes them. Changing the filters or histogram bins requires generating the description again."
     )
+    labels = {}
+    for value in frame["mission_type"].fillna(""):
+        label = str(value).strip()
+        if label:
+            labels.setdefault(label.casefold(), label)
+    excluded = st.multiselect(
+        "Exclude mission types from the table and histogram",
+        options=sorted(labels.values()),
+        key=context + "-description-exclusions",
+        help="Matches complete labels, ignoring capitalization and surrounding whitespace. "
+        "Combined labels remain included unless explicitly selected. "
+        "This only affects the dataset description, not the workbook, other charts or simulations.",
+    )
+    excluded_keys = {value.casefold() for value in excluded}
+    excluded_mask = frame["mission_type"].fillna("").astype(str).str.strip().str.casefold().isin(excluded_keys)
+    frame = frame.loc[~excluded_mask].copy()
+    if excluded:
+        st.caption(f"{int(excluded_mask.sum())} missions excluded; {len(frame)} missions retained.")
+    if frame.empty:
+        st.info("No missions remain for the dataset description.")
+        return
     bins = st.number_input(
         "Histogram bins",
         min_value=1,

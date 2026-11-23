@@ -52,9 +52,15 @@ Already have a CARIBOU missions workbook? Go straight to **Simulation**. Already
 
 Each mission has a unique ID and a stable traveler ID. Segments belonging to the same mission can be combined: emissions are added, the earliest departure date is retained, and distinct purposes are joined. The exported `missions` sheet contains `mission_id`, `year`, `person_id`, `team`, `mission_type`, `start_date` and `emissions_kg_co2e`.
 
+Mission-type exclusions match complete labels; mixed-purpose missions remain included unless their full label is selected.
+
 Missions without a team remain in the prepared workbook and charts, but are excluded from simulations. Simulated team sizes count eligible travelers, not complete staff rosters.
 
 Emissions estimates use geographic distances and transportation factors adapted from [GES 1point5](https://doi.org/10.1088/2634-4505/ac84a4). Online geocoding sends city/country pairs to OpenStreetMap Nominatim; download the coordinate cache to reuse it or work offline. Round trips double the one-way estimate. Taxi estimates also include an empty vehicle return; car and taxi estimates are per vehicle.
+
+### Restriction rates by category
+
+Compare mission refusal rates by purpose and personnel category. Map your staff-category column to `personnel_category` during preparation. A mission with several purposes contributes to each purpose; these labels do not affect allocation.
 
 ## Scenarios, not predictions
 

@@ -61,7 +61,7 @@ plt.rcParams.update({
 
 
 # ==================================================================================================
-# Utilities
+# Utility function
 # ==================================================================================================
 
 def load_eligible_missions(
@@ -88,9 +88,7 @@ def load_eligible_missions(
     excluded_types.discard("")
     df["mission_type"] = df["mission_type"].astype("string").fillna("").str.strip()
     types = df["mission_type"].str.casefold()
-    excluded_type_mask = (~missing_team_mask) & types.map(
-        lambda value: any(part.strip() in excluded_types for part in value.split(","))
-    )
+    excluded_type_mask = (~missing_team_mask) & types.isin(excluded_types)
     eligible_mask = ~(missing_team_mask | excluded_type_mask)
 
     exclusions = {
@@ -308,7 +306,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
-        help="Mission types to exclude (case-insensitive); missions without a team are always excluded",
+        help="Complete mission-type labels to exclude (case-insensitive); combined labels must be specified in full; missions without a team are always excluded",
     )
     parser.add_argument(
         "--table-dir", type=Path, default=Path("artifacts"),

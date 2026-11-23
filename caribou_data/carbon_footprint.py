@@ -110,7 +110,7 @@ def build_mode_map(aliases: dict[str, list[str]]) -> dict[str, str]:
 
 
 # ==================================================================================================
-# Geographic utilities
+# Geographic utility functions
 # ==================================================================================================
 
 def check_coords(coords: object) -> bool:

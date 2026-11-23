@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — Main application."""
+"""CARIBOU — Streamlit entry point connecting preparation, exploration and simulation.
+
+Tab modules handle their own controls and calculations. This module passes
+validated mission tables between them; simulation and artifact results are
+managed by those modules in Streamlit's session state.
+"""
 
 from hashlib import sha256
 from io import BytesIO
@@ -9,12 +14,15 @@ from io import BytesIO
 import pandas as pd
 import streamlit as st
 
-from caribou_ui.advanced import render_advanced
-from caribou_ui.preparation import render_missions
+from caribou_ui.data_preparation import render_simple, render_advanced
 from caribou_ui.visualizations import render
 from caribou_ui.simulation import render_simulation
 from caribou_ui.artifacts import render_artifacts
 
+
+# ==================================================================================================
+# Configuration
+# ==================================================================================================
 
 st.set_page_config(page_title="CARIBOU", page_icon="🦌", layout="wide")
 st.title("🦌 CARIBOU")
@@ -37,48 +45,12 @@ with st.expander("Keeping your results"):
     )
 
 
-def render_simple():
-    """Import, map, validate and export previously estimated emissions."""
-    st.subheader("Prepare missions from existing emissions")
-    st.caption(
-        "Upload an Excel workbook with emissions already calculated. Each row may be a complete "
-        "mission or a travel segment to combine. Match your columns below, then download the "
-        "validated missions workbook or continue directly to Visualization and Simulation."
-    )
-    upload = st.file_uploader(
-        "Consolidated Excel workbook", type=["xlsx"], key="simple-upload"
-    )
-    if upload is None:
-        st.info(
-            "Upload a workbook with previously estimated emissions. Mission identifiers "
-            "must be unique across travelers and years; traveler identifiers must remain stable."
-        )
-        return None
+# ==================================================================================================
+# Rendering
+# ==================================================================================================
 
-    raw = upload.getvalue()
-    key = "simple-" + sha256(raw).hexdigest()[:16]
-    try:
-        with pd.ExcelFile(BytesIO(raw), engine="openpyxl") as book:
-            sheet = st.selectbox(
-                "Source worksheet", book.sheet_names, key=f"sheet-{key}"
-            )
-            header = st.number_input(
-                "Header row", min_value=1, value=1, step=1, key=f"header-{key}-{sheet}"
-            )
-            source = pd.read_excel(
-                book, sheet_name=sheet, header=int(header) - 1, dtype=object
-            )
-    except Exception as exc:
-        st.error(f"Unable to read the workbook: {exc}")
-        return None
-
-    st.dataframe(source.head(100), use_container_width=True)
-    st.caption(
-        f"{len(source)} rows; preview limited to the first 100. Empty rows are not automatically removed."
-    )
-    return render_missions(source, f"{key}-{sheet}-{header}")
-
-
+# Streamlit reruns this script on interaction and executes every tab body,
+# including hidden tabs. Prepare both sources before rendering downstream tabs.
 simple_tab, advanced_tab, viz_tab, simulation_tab, artifacts_tab = st.tabs(
     ["1. Simple preparation", "1. Advanced preparation", "2. Visualization", "3. Simulation", "4. Artifacts"]
 )
@@ -90,6 +62,8 @@ with advanced_tab:
     advanced_missions = render_advanced()
 
 with viz_tab:
+    # Share only validated datasets. Keep both preparation modes independent so
+    # users can choose a source without replacing the other mode's data.
     available = {}
     if simple_missions is not None:
         available["Simple preparation"] = simple_missions
@@ -103,13 +77,14 @@ with viz_tab:
     else:
         mode = st.radio("Data source", list(available), horizontal=True)
         st.caption(f"Showing validated missions from {mode}.")
+        # The source context keeps visualization controls separate for each mode.
         render(available[mode], context=mode)
 
-
-
 with simulation_tab:
+    # Simulations can use either prepared dataset or their own workbook upload.
     render_simulation(available)
 
-
 with artifacts_tab:
+    # Artifacts use completed simulation results from session state or uploaded
+    # reports; they do not depend on the visualization's selected source.
     render_artifacts()
