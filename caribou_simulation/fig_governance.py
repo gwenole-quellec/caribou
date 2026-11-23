@@ -54,7 +54,7 @@ FAMILIES = (
     "cost",
     "distributive",
     "longitudinal",
-    "random",
+    "categorical",
 )
 
 FAMILY_LABELS = {
@@ -62,7 +62,7 @@ FAMILY_LABELS = {
     "cost": "Prioritize\n by emissions",
     "distributive": "Spread travel\n opportunities",
     "longitudinal": "Compensate\n past restrictions",
-    "random": "Random\n priorities",
+    "categorical": "Prioritize by\n staff and purpose",
 }
 
 POOLING_LABELS = {

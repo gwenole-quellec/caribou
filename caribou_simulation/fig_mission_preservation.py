@@ -135,6 +135,7 @@ def load_curves(results_dir: Path) -> tuple[dict, int]:
 
         curves[target] = (pooling, percentiles)
         counts.add(len(report["draws"]))
+        del report
 
     if len(counts) != 1:
         raise ValueError("Reports contain different numbers of sampled rules")
@@ -146,7 +147,7 @@ def load_curves(results_dir: Path) -> tuple[dict, int]:
 # Figure
 # ==================================================================================================
 
-def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
+def plot_mission_preservation(curves: dict, rule_count: int, output_dir: Path) -> None:
     """Plot all carbon targets on a single, decision-oriented axis."""
     fig, ax = plt.subplots(figsize=FIGURE_SIZE, constrained_layout=True)
 
@@ -193,9 +194,12 @@ def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
             fontsize=11.5, fontweight="bold", clip_on=False,
         )
 
+    fig.suptitle(
+        "How many research trips can budget pooling preserve?", fontsize=17,
+    )
     ax.set_title(
-        "How many research trips can budget pooling preserve?",
-        fontsize=17, pad=15,
+        "Lower is better — more missions preserved",
+        fontsize=12, color="#5E6670", pad=14,
     )
     ax.set_xlabel("Share of the annual carbon budget pooled", fontsize=12)
     ax.set_ylabel("Refused missions per 100 requested trips", fontsize=12)
@@ -210,11 +214,6 @@ def plot_missions(curves: dict, rule_count: int, output_dir: Path) -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    ax.text(
-        0.015, 0.98, "Lower is better",
-        transform=ax.transAxes, fontsize=11,
-        va="top", ha="left", color="#5E6670",
-    )
     ax.text(
         0.5, -0.14,
         f"Median across {rule_count:,} sampled decision rules · "
@@ -251,7 +250,7 @@ def main() -> None:
     args = parser.parse_args()
 
     curves, rule_count = load_curves(args.results_dir)
-    plot_missions(curves, rule_count, args.output_dir)
+    plot_mission_preservation(curves, rule_count, args.output_dir)
 
 
 if __name__ == "__main__":

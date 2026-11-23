@@ -35,7 +35,7 @@ plot_histogram(frame.emissions_kg_co2e.to_numpy(dtype=float), output, int(bins))
 
 
 # ==================================================================================================
-# Description generation
+# Dataset description generation
 # ==================================================================================================
 
 def describe_view(frame, bins=30):

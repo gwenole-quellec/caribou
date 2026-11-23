@@ -3,9 +3,9 @@
 
 """CARIBOU — Travel distances, geocoding and emission factors for CARIBOU.
 
-Pure calculation helpers and explicit geocoding/cache operations are shared by
-workbook preparation and the UI. This module has no command-line interface.
-Taxi estimates include an empty vehicle return, separate from passenger returns.
+Pure calculation helpers and explicit geocoding/cache operations are shared by workbook preparation
+and the UI. This module has no command-line interface. Taxi estimates include an empty vehicle
+return, separate from passenger returns.
 """
 
 from __future__ import annotations
@@ -50,14 +50,6 @@ EMISSION_FACTORS_G_PER_KM = {
     "car": 215.6,
     "bus": 30.6,  # Intercity coach; not an urban-bus factor.
 }
-DEFAULT_ALIASES = {
-    "plane": ["plane", "flight"],
-    "train": ["train", "rail"],
-    "car": ["car"],
-    "taxi": ["taxi"],
-    "bus": ["bus", "coach", "intercity coach"],
-}
-
 COUNTRY_FRANCE = {"france", "fr", "fra"}
 
 ERROR_COLUMNS = [
@@ -152,15 +144,6 @@ def haversine_km(a: list[float], b: list[float]) -> float:
         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
     )
     return 2 * EARTH_RADIUS_KM * math.asin(min(1.0, math.sqrt(x)))
-
-
-def read_cache(path: Path) -> dict[str, list[float]]:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError(f"Geocode cache must be a JSON object: {path}")
-    return {str(k): list(map(float, v)) for k, v in data.items() if check_coords(v)}
 
 
 def save_cache(path: Path, cache: dict[str, list[float]]) -> None:

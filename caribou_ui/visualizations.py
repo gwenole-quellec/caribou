@@ -97,7 +97,8 @@ def render(df, context="missions"):
         + legend_items + '</div></div>',
         unsafe_allow_html=True,
     )
-    st.caption("Each color represents one complete mission-type label. Combined purposes remain a single category; emissions are counted once.")
+    st.caption("Each color represents one complete mission-type label. "
+               "Combined purposes remain a single category; emissions are counted once.")
     st.subheader("Distribution of emissions per mission")
     bins = pd.cut(view.emissions_kg_co2e, bins=20)
     counts = bins.value_counts(sort=False)

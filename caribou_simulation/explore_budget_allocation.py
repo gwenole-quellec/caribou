@@ -23,7 +23,7 @@ import hashlib
 import json
 import math
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from collections.abc import Callable
 from pathlib import Path
 
@@ -67,17 +67,16 @@ CALIBRATION_UPPER_OFFSET_KG_CO2E = 1.0
 NUMERICAL_TOLERANCE = 1e-9
 
 FAMILY_SEQUENTIAL = 0
-FAMILY_COST = 1
 FAMILY_DISTRIBUTIVE = 2
 FAMILY_LONGITUDINAL = 3
-FAMILY_RANDOM = 4
+FAMILY_CATEGORICAL = 4
 
 FAMILIES = (
     "sequential",
     "cost",
     "distributive",
     "longitudinal",
-    "random",
+    "categorical",
 )
 
 METRICS = (
@@ -120,9 +119,8 @@ LONGITUDINAL_NOISE_WEIGHT_RANGE = (0.1, 1.1)
 LONGITUDINAL_CAP_MULTIPLE_RANGE = (1.0, 4.0)
 LONGITUDINAL_NO_CAP_PROBABILITY = 0.5
 
-# Random governance
-RANDOM_PERSON_WEIGHT_RANGE = (0.0, 1.5)
-RANDOM_NOISE_WEIGHT_RANGE = (0.1, 1.1)
+# Categorical governance
+CATEGORICAL_WEIGHT_RANGE = (-1.0, 1.0)
 
 
 # ==================================================================================================
@@ -142,6 +140,9 @@ class Rule:
     reserve_fraction: float = 0.0
     release_power: float = 1.0
     cap_multiple: float | None = None
+    personnel_share: float = 0.5
+    purpose_weights: dict[str, float] = field(default_factory=dict)
+    personnel_weights: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -178,9 +179,9 @@ def load_missions(
 ) -> Missions:
     """Read complete missions and construct annual individual/team allocation groups.
 
-    Rows with an empty team (including missing or whitespace-only values) are
-    always ignored. Mission types specified by the user are also excluded,
-    case-insensitively. Filtering precedes all validation and budget calculations.
+    Rows with an empty team (including missing or whitespace-only values) are always ignored.
+    Mission types specified by the user are also excluded, case-insensitively. Filtering precedes
+    all validation and budget calculations.
     Team headcounts use eligible travelers, not the full staff roster.
     """
     df = pd.read_excel(path, sheet_name="missions")
@@ -312,6 +313,7 @@ def sample_rules(
     n: int,
     rng: np.random.Generator,
     sampling: str,
+    category_groups: dict,
 ) -> list[Rule]:
     """Sample balanced rule families, with optional Latin-hypercube designs."""
     if n < 1:
@@ -321,16 +323,23 @@ def sample_rules(
     families += list(FAMILIES[: n % len(FAMILIES)])
     rng.shuffle(families)
 
+    category_labels = {
+        section: sorted(label for label in labels if label != "Not specified")
+        for section, labels in category_groups.items()
+    }
+    categorical_dimensions = 1 + sum(len(labels) for labels in category_labels.values())
     designs = {}
     for family in FAMILIES:
         count = families.count(family)
         if count == 0:
             continue
+        dimensions = categorical_dimensions if family == "categorical" \
+            else LATIN_HYPERCUBE_DIMENSIONS
         if sampling == "latin":
-            design = qmc.LatinHypercube(d=LATIN_HYPERCUBE_DIMENSIONS, seed=int(rng.integers(2**32)))
+            design = qmc.LatinHypercube(d=dimensions, seed=int(rng.integers(2**32)))
             designs[family] = design.random(count)
         else:
-            designs[family] = rng.random((count, LATIN_HYPERCUBE_DIMENSIONS))
+            designs[family] = rng.random((count, dimensions))
 
     next_row = dict.fromkeys(FAMILIES, 0)
     rules = []
@@ -396,15 +405,21 @@ def sample_rules(
                 ),
             )
 
-        elif family == "random":
+        elif family == "categorical":
+            purpose_labels = category_labels["by_mission_type"]
+            personnel_labels = category_labels["by_personnel_category"]
+            split = 1 + len(purpose_labels)
             rule = Rule(
                 family=family,
-                person_weight=scale_parameter(
-                    values[0], RANDOM_PERSON_WEIGHT_RANGE
-                ),
-                noise_weight=scale_parameter(
-                    values[1], RANDOM_NOISE_WEIGHT_RANGE
-                ),
+                personnel_share=float(values[0]),
+                purpose_weights={
+                    label: scale_parameter(value, CATEGORICAL_WEIGHT_RANGE)
+                    for label, value in zip(purpose_labels, values[1:split])
+                },
+                personnel_weights={
+                    label: scale_parameter(value, CATEGORICAL_WEIGHT_RANGE)
+                    for label, value in zip(personnel_labels, values[split:])
+                },
             )
 
         else:
@@ -422,7 +437,7 @@ def sample_rules(
 @njit(cache=True)
 def _selection_core(
     person, team, cost, cost_z, date_fraction,
-    year_offsets, team_headcounts, person_effect, mission_noise,
+    year_offsets, team_headcounts, person_effect, mission_noise, category_priority,
     pooling, b0, family, cost_weight, fairness_weight,
     history_weight, person_weight, noise_weight,
     reserve_fraction, release_power, cap_multiple,
@@ -491,13 +506,21 @@ def _selection_core(
                         + noise_weight * mission_noise[idx]
                     ) / scale
 
+                    if family == FAMILY_CATEGORICAL:
+                        score = category_priority[idx]
+
                     if pooling > 0 and family == FAMILY_LONGITUDINAL:
                         score += history_weight * history[p] / scale
                     if pooling > 0 and family == FAMILY_DISTRIBUTIVE:
                         score -= fairness_weight * total_spent[p] / max(b0, NUMERICAL_TOLERANCE) / scale
 
-                    # Stable ties are resolved by the original date-sorted order.
-                    if score > best_score:
+                    # Categorical noise only breaks exact ties, never category ranks.
+                    tied_category = (
+                        family == FAMILY_CATEGORICAL and best_index >= 0
+                        and score == best_score
+                        and mission_noise[idx] > mission_noise[best_index]
+                    )
+                    if score > best_score or tied_category:
                         best_score = score
                         best_index = idx
 
@@ -565,6 +588,22 @@ def _prepare_fast_inputs(data: Missions) -> None:
 # Allocation and mission selection
 # ==================================================================================================
 
+def categorical_priority(data: Missions, rule: Rule) -> np.ndarray:
+    """Combine personnel weights and mean purpose weights; missing labels are neutral."""
+    purpose = np.zeros(len(data.cost))
+    counts = np.zeros(len(data.cost))
+    personnel = np.zeros(len(data.cost))
+    for label, indices in data.category_groups["by_mission_type"].items():
+        if label != "Not specified":
+            purpose[indices] += rule.purpose_weights[label]
+            counts[indices] += 1
+    np.divide(purpose, counts, out=purpose, where=counts > 0)
+    for label, indices in data.category_groups["by_personnel_category"].items():
+        if label != "Not specified":
+            personnel[indices] = rule.personnel_weights[label]
+    return rule.personnel_share * personnel + (1 - rule.personnel_share) * purpose
+
+
 def simulate(
     data: Missions,
     pooling: float,
@@ -587,10 +626,14 @@ def simulate(
         raise ValueError("pooling must be in [0, 1] and B0 must be nonnegative")
 
     _prepare_fast_inputs(data)
+    category_priority = (
+        categorical_priority(data, rule)
+        if rule.family == "categorical" else np.zeros(len(data.cost))
+    )
     return _selection_core(
         data.person, data.team, data.cost, data.cost_z,
         data.date_fraction, data.year_offsets, data.team_headcounts,
-        person_effect, mission_noise, pooling, b0,
+        person_effect, mission_noise, category_priority, pooling, b0,
         FAMILIES.index(rule.family), rule.cost_weight,
         rule.fairness_weight, rule.history_weight,
         rule.person_weight, rule.noise_weight,
@@ -901,7 +944,9 @@ def create_report(
                 for name in METRICS
             }
 
-        entry["breakdowns"] = summarize_breakdowns(records, key, zero if has_zero else None, describe)
+        entry["breakdowns"] = summarize_breakdowns(
+            records, key, zero if has_zero else None, describe
+        )
         by_lambda[key] = entry
 
     return {
@@ -981,7 +1026,7 @@ def run(
 
     data = load_missions(args.input, args.exclude_mission_types, args.headcount)
     rng = np.random.default_rng(args.seed)
-    rules = sample_rules(args.draws, rng, args.sampling)
+    rules = sample_rules(args.draws, rng, args.sampling, data.category_groups)
 
     records = {
         target: [
@@ -1076,7 +1121,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/results"))
     parser.add_argument(
         "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
-        help="Complete mission-type labels to exclude (case-insensitive); combined labels must be specified in full; missions without a team are always excluded",
+        help="Complete mission-type labels to exclude (case-insensitive); "
+             "combined labels must be specified in full; missions without a team are always excluded",
     )
     parser.add_argument(
         "--targets", type=float, nargs="+", default=list(DEFAULT_TARGETS)

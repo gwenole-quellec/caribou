@@ -7,9 +7,39 @@ from hashlib import sha256
 import json
 import streamlit as st
 
-from caribou_simulation.artifacts import ARTIFACTS, generate_artifacts, read_reports
+from caribou_simulation.artifacts import ARTIFACTS, generate_artifacts
+from caribou_ui.reports import report_summary, uploaded_reports
 
 
+def category_controls(reports):
+    """Collect figure-only category visibility and display names."""
+    name, content = next(iter(reports.items()))
+    report = report_summary(name, content)
+    summary = next(iter(report["summary_by_lambda"].values()))["breakdowns"]
+    settings = {}
+    with st.expander("Mission preservation breakdown settings"):
+        st.caption("Hide categories and edit their display names, for example to use English labels. "
+                   "These settings only change the figure; missions and simulation results remain "
+                   "unchanged.")
+        for section, title in [("by_mission_type", "Mission purposes"),
+                               ("by_personnel_category", "Personnel categories")]:
+            st.markdown(f"**{title}**")
+            labels = sorted(summary[section], key=str.casefold)
+            hidden = st.multiselect("Categories to hide — " + title.lower(), labels,
+                                    key="artifact-hidden-" + section)
+            names = {}
+            for label in labels:
+                if label in hidden:
+                    continue
+                key = sha256((section + label).encode()).hexdigest()[:16]
+                name = st.text_input(label, value=label, key="artifact-label-" + key)
+                if name != label:
+                    names[label] = name
+            settings[section] = {"hidden": hidden, "labels": names}
+    return settings
+
+
+@st.fragment
 def render_artifacts():
     """Use the last completed simulation or uploaded reports to build artifacts."""
     st.subheader("Generate figures and tables")
@@ -45,14 +75,16 @@ def render_artifacts():
         )
         if uploads:
             try:
-                reports = read_reports(
+                reports = uploaded_reports(
                     [(upload.name, upload.getvalue()) for upload in uploads]
                 )
             except Exception as exc:
                 st.error(f"Unable to read simulation results: {exc}")
                 return
     st.caption(
-        "The existing artifact templates use targets 5, 10, 15 and 20%. Governance and restrictions also need pooling fractions 0, 0.2, 0.5 and 1. Keep per-rule results enabled when simulating."
+        "Artifact templates use targets 5, 10, 15 and 20%. Governance and traveler restrictions "
+        "need pooling fractions 0, 0.2, 0.5 and 1; the category breakdown needs 0, 0.2 and 0.5. "
+        "Keep per-rule results enabled when simulating."
     )
     selected = st.multiselect(
         "Artifacts to generate",
@@ -68,7 +100,8 @@ def render_artifacts():
             value=0.5,
             step=0.1,
             key="artifact-pooling",
-            help="Select a pooling fraction present in your simulation reports. The table reports paired changes relative to no pooling (0).",
+            help="Select a pooling fraction present in your simulation reports. "
+                 "The table reports paired changes relative to no pooling (0).",
         )
         decimals = st.number_input(
             "Decimal places",
@@ -86,8 +119,8 @@ def render_artifacts():
         return
     try:
         targets = [
-            json.loads(content)["target_reduction_percent"]
-            for content in reports.values()
+            report_summary(name, content)["target_reduction_percent"]
+            for name, content in reports.items()
         ]
         st.caption(
             "Available reduction targets: "
@@ -96,11 +129,18 @@ def render_artifacts():
     except Exception as exc:
         st.error(f"Invalid reports: {exc}")
         return
+    category_settings = {}
+    if "Mission preservation by category" in selected:
+        try:
+            category_settings = category_controls(reports)
+        except Exception as exc:
+            st.error(f"Unable to read category settings: {exc}")
+            return
     digest = sha256()
     for name, content in sorted(reports.items()):
         digest.update(name.encode())
-        digest.update(content)
-    digest.update(json.dumps([selected, pooling, decimals]).encode())
+        digest.update(report_summary(name, content)["identity"].encode())
+    digest.update(json.dumps([selected, pooling, decimals, category_settings]).encode())
     signature = digest.hexdigest()
     if st.button(
         "Generate artifacts",
@@ -119,7 +159,8 @@ def render_artifacts():
                 )
 
             files, errors, archive = generate_artifacts(
-                reports, selected, pooling, int(decimals), progress=update
+                reports, selected, pooling, int(decimals), progress=update,
+                category_settings=category_settings
             )
             st.session_state["artifact-result"] = (signature, files, errors, archive)
         except Exception as exc:
@@ -131,7 +172,8 @@ def render_artifacts():
     _, files, errors, archive = result
     for label, message in errors.items():
         st.warning(
-            f"{label} could not be generated. Check that all required targets and pooling fractions are available."
+            f"{label} could not be generated. "
+            "Check that all required targets and pooling fractions are available."
         )
         with st.expander(label + " — details"):
             st.code(message, language="text")
@@ -140,7 +182,8 @@ def render_artifacts():
     st.success("Artifacts are ready.")
     st.download_button(
         "Download all artifacts (.zip)",
-        archive,
+        lambda: archive,
+        on_click="ignore",
         file_name="caribou_artifacts.zip",
         mime="application/zip",
         key="artifact-download-all",
@@ -171,7 +214,8 @@ def render_artifacts():
             )
             st.download_button(
                 "Download " + name,
-                content,
+                lambda content=content: content,
+                on_click="ignore",
                 file_name=name,
                 mime=mime,
                 key="artifact-download-" + name,

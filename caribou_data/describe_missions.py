@@ -4,8 +4,8 @@
 """CARIBOU — Summarize eligible research-travel missions.
 
 Reads the 'missions' worksheet from carbon_footprint.xlsx, using the same eligibility criteria as
-explore_budget_allocation.py: missions without a team are always ignored, and specified mission types
-are excluded. No mission type is excluded by default.
+explore_budget_allocation.py: missions without a team are always ignored, and specified mission
+types are excluded. No mission type is excluded by default.
 
 Outputs:
   artifacts/table_dataset.tex             LaTeX descriptive table
@@ -38,8 +38,7 @@ from matplotlib.ticker import MaxNLocator
 # ==================================================================================================
 
 REQUIRED_COLUMNS = (
-    "mission_id", "year", "person_id", "team", "mission_type", "start_date",
-    "emissions_kg_co2e",
+    "mission_id", "year", "person_id", "team", "mission_type", "start_date", "emissions_kg_co2e",
 )
 
 TABLE_FILENAME = "table_dataset"
@@ -69,8 +68,8 @@ def load_eligible_missions(
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     """Use exactly the simulation's team and mission-type eligibility filtering.
 
-    Filtering precedes validation. Count each excluded mission once, giving
-    missing teams precedence when a row also matches an excluded mission type.
+    Filtering precedes validation. Count each excluded mission once, giving missing teams precedence
+    when a row also matches an excluded mission type.
     """
     if not path.is_file():
         raise FileNotFoundError(f"Input workbook not found: {path}")
@@ -306,7 +305,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--exclude-mission-types", nargs="+", default=[], metavar="TYPE",
-        help="Complete mission-type labels to exclude (case-insensitive); combined labels must be specified in full; missions without a team are always excluded",
+        help="Complete mission-type labels to exclude (case-insensitive); "
+             "combined labels must be specified in full; missions without a team are always excluded",
     )
     parser.add_argument(
         "--table-dir", type=Path, default=Path("artifacts"),

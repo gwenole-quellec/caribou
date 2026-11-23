@@ -41,7 +41,8 @@ OUTPUT_STEM = Path(__file__).stem
 METRICS = (
     ("refused_missions_percent", "Refused missions", "O_{\\mathrm{miss}}"),
     ("affected_traveler_years_percent", "Affected traveler-years", "O_{\\mathrm{aff}}"),
-    ("severely_affected_traveler_years_percent", "Severely affected traveler-years", "O_{\\mathrm{sev}}"),
+    ("severely_affected_traveler_years_percent", "Severely affected traveler-years",
+     "O_{\\mathrm{sev}}"),
     ("repeatedly_affected_travelers_percent", "Repeatedly affected travelers", "O_{\\mathrm{rep}}"),
 )
 
@@ -133,7 +134,7 @@ def analyze(results_dir: Path, pooling: float) -> tuple[dict, int, float]:
         summary[target] = summarize_report(report, target, pooling)
         counts.add(len(report["draws"]))
         thresholds.add(float(report["experiment"]["severity_threshold"]))
-        del report  # do not retain all four 10,000-rule reports in memory
+        del report  # do not retain full reports in memory
 
     if len(counts) != 1:
         raise ValueError("Reports contain different numbers of sampled rules")
@@ -158,15 +159,14 @@ def markdown_table(
     lines = [
         f"# CARIBOU restriction outcomes at {100 * pooling:g}% pooling",
         "",
-        f"Median percentages across {n_rules:,} sampled prioritization rules. "
-        "Each cell shows the median outcome at the selected pooling fraction "
-        "followed by the median **within-rule paired difference** relative to "
-        "no pooling (lambda = 0), in percentage points. "
+        f"Median percentages across {n_rules:,} sampled prioritization rules. Each cell shows "
+        "the median outcome at the selected pooling fraction followed by the median **within-rule "
+        "paired difference** relative to no pooling (lambda = 0), in percentage points. "
         "Positive differences indicate more restrictions.",
         "",
-        f"Severe means refusing at least {100 * threshold:g}% of an active "
-        "traveler-year's requested missions; repeated means refusals in at least "
-        "two distinct years among travelers active in at least two years.",
+        f"Severe means refusing at least {100 * threshold:g}% of an active traveler-year's "
+        "requested missions; repeated means refusals in at least two distinct years among "
+        "travelers active in at least two years.",
         "",
         "| Expected reduction target | " + " | ".join(headers) + " |",
         "| :--- | " + " | ".join(":---:" for _ in METRICS) + " |",
@@ -176,9 +176,9 @@ def markdown_table(
         lines.append(f"| {target}% | {values} |")
     lines.extend([
         "",
-        "The sampled hypothetical rules support sensitivity analysis, "
-        "not probabilistic inference about actual institutional behavior. "
-        "The median of paired differences need not equal the difference of medians.",
+        "The sampled hypothetical rules support sensitivity analysis, not probabilistic inference "
+        "about actual institutional behavior. The median of paired differences need not equal "
+        "the difference of medians.",
         "",
     ])
     return "\n".join(lines)

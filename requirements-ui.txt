@@ -1,5 +1,6 @@
 -r requirements.txt
-streamlit>=1.40,<2
+streamlit>=1.55,<2
 pandas>=2.2,<3
 openpyxl>=3.1,<4
 altair>=5,<7
+ijson>=3.4,<4

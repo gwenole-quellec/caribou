@@ -235,6 +235,8 @@ MODE_ALIASES = {
     ],
 }
 
+VERSION = "1.0"
+
 
 # ==================================================================================================
 # Data structures
@@ -294,14 +296,14 @@ def calculate(
     always_round_trip=False,
     cache_bytes=None,
     offline=False,
-    user_agent="CARIBOU-carbon-footprint-ui/1.0 (academic research)",
+    user_agent=f"CARIBOU-carbon-footprint-ui/{VERSION} (academic research)",
     progress=None,
 ):
     """Enrich the selected worksheet, preserving source rows and other worksheets.
 
-    A selected round-trip column overrides the global default. Invalid rows keep
-    an empty footprint and appear in the error report. Only city/country pairs
-    are passed to the engine's geocoder; temporary cache files are removed.
+    A selected round-trip column overrides the global default. Invalid rows keep an empty footprint
+    and appear in the error report. Only city/country pairs are passed to the engine's geocoder;
+    temporary cache files are removed.
     Optional progress(stage, completed, total) reports location, row and write stages.
     """
     if header < 1:

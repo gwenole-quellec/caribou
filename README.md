@@ -60,7 +60,9 @@ Emissions estimates use geographic distances and transportation factors adapted 
 
 ### Restriction rates by category
 
-Compare mission refusal rates by purpose and personnel category. Map your staff-category column to `personnel_category` during preparation. A mission with several purposes contributes to each purpose; these labels do not affect allocation.
+Compare mission refusal rates by purpose and personnel category. Map your staff-category column to `personnel_category` during preparation. A mission with several purposes contributes to each purpose; the categorical strategy prioritizes these categories using sampled weights.
+
+Categorical rules combine personnel-category weights and mean mission-purpose weights. Missing categories are neutral; random draws only break ties within this family. In **Artifacts**, generate **Mission preservation by category** to compare 20% and 50% pooling with no pooling; hide categories or rename their labels in the figure settings.
 
 ## Scenarios, not predictions
 
@@ -70,7 +72,7 @@ The default simulation tests reductions of **5, 10, 15 and 20%**, with **10,000 
 
 ## Local and open source
 
-Download the workbooks, reports and figures you want to keep before closing or restarting the app. There is no persistent database or automatic project-folder backup. Never commit identifying travel records or geocoding caches to a public repository. The confidential study workbook is not included.
+Download the workbooks, reports and figures you want to keep before closing or restarting the app. Large reports use temporary session files to keep memory use low. There is no persistent database or automatic project-folder backup. Never commit identifying travel records or geocoding caches to a public repository. The confidential study workbook is not included.
 
 Command-line simulations and reporting remain available through `python -m caribou_simulation.<module>` and `python -m caribou_data.describe_missions`; use `--help` for options. Command-line outputs default to `artifacts/`, with simulation JSON reports in `artifacts/results/`.
 

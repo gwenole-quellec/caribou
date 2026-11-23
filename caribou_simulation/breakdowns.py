@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""CARIBOU — Descriptive restriction rates; category labels never affect allocation."""
+"""CARIBOU — Category groups and descriptive restriction rates."""
 
 import numpy as np
 import pandas as pd
@@ -12,15 +12,17 @@ import pandas as pd
 # ==================================================================================================
 
 DEFINITIONS = {
-    "by_mission_type": "Refused missions / requested missions of each purpose, in percent. Comma-separated purposes overlap: a mission counts once in each distinct purpose.",
-    "by_personnel_category": "Refused missions / requested missions of each personnel category, in percent. This is a mission rate, not a percentage of affected people.",
+    "by_mission_type": "Refused missions / requested missions of each purpose, in percent. "
+                       "Comma-separated purposes overlap: a mission counts once in each distinct purpose.",
+    "by_personnel_category": "Refused missions / requested missions of each personnel category, in percent. "
+                             "This is a mission rate, not a percentage of affected people.",
     "missing_labels": "Blank or unavailable labels are reported as Not specified.",
     "calibration": "Rates use the same whole-mission allocation lottery weights as the existing metrics.",
 }
 
 
 # ==================================================================================================
-# Breakdowns management
+# Breakdown management
 # ==================================================================================================
 
 def build_groups(frame):
@@ -63,7 +65,10 @@ def interpolate_breakdowns(left, right, weight):
     return {
         section: {
             label: {"requested_missions": entry["requested_missions"],
-                    "refused_missions_percent": float(weight * entry["refused_missions_percent"] + (1 - weight) * right[section][label]["refused_missions_percent"])}
+                    "refused_missions_percent": float(
+                        weight * entry["refused_missions_percent"] +
+                        (1 - weight) * right[section][label]["refused_missions_percent"]
+                    )}
             for label, entry in categories.items()
         }
         for section, categories in left.items()
@@ -77,7 +82,8 @@ def summarize_breakdowns(records, key, baseline, describe):
     for section, categories in first.items():
         result[section] = {}
         for label, entry in categories.items():
-            values = [record["by_lambda"][key]["breakdowns"][section][label]["refused_missions_percent"] for record in records]
+            values = [record["by_lambda"][key]["breakdowns"][section][label]["refused_missions_percent"]
+                      for record in records]
             summary = {"requested_missions": entry["requested_missions"],
                        "refused_missions_percent": describe(values)}
             if baseline is not None:

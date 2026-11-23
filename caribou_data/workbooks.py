@@ -4,7 +4,6 @@
 """CARIBOU — Workbook mapping, mission aggregation and validation, independent of Streamlit."""
 
 from io import BytesIO
-import unicodedata
 import numpy as np
 import pandas as pd
 
@@ -23,46 +22,11 @@ COLUMNS = [
     "emissions_kg_co2e",
 ]
 OPTIONAL_COLUMNS = ["personnel_category"]
-ALIASES = {
-    "mission_id": ["mission", "id mission", "numero mission"],
-    "year": ["annee"],
-    "person_id": ["agent", "id agent", "matricule"],
-    "team": ["equipe", "service"],
-    "mission_type": ["type mission", "motif"],
-    "start_date": ["date depart", "date debut"],
-    "emissions_kg_co2e": ["carbon footprint", "co2", "emissions", "kg co2e"],
-}
 
 
 # ==================================================================================================
 # Utility functions
 # ==================================================================================================
-
-def normalized(value):
-    return (
-        "".join(
-            c
-            for c in unicodedata.normalize("NFKD", str(value).lower())
-            if not unicodedata.combining(c)
-        )
-        .replace("_", " ")
-        .strip()
-    )
-
-
-def suggest_mapping(columns):
-    return {
-        field: next(
-            (
-                c
-                for c in columns
-                if normalized(c) in [normalized(field), *ALIASES[field]]
-            ),
-            None,
-        )
-        for field in COLUMNS
-    }
-
 
 def combine_mission_types(values):
     """Join distinct nonempty comma-separated purposes in source order."""
@@ -176,7 +140,9 @@ def prepare(
                     )
         if not errors:
             optional_values = {
-                c: df.groupby("mission_id")[c].agg(lambda values: next((value for value in values if value), ""))
+                c: df.groupby("mission_id")[c].agg(
+                    lambda values: next((value for value in values if value), "")
+                )
                 for c in optional
             }
             df = df.groupby("mission_id", as_index=False).agg(
@@ -207,7 +173,8 @@ def export_workbook(df):
     output = BytesIO()
     # Prevent spreadsheet applications from interpreting source text as formulas.
     safe = df.copy()
-    for c in ["mission_id", "person_id", "team", "mission_type", *[name for name in OPTIONAL_COLUMNS if name in safe]]:
+    for c in ["mission_id", "person_id", "team", "mission_type",
+              *[name for name in OPTIONAL_COLUMNS if name in safe]]:
         safe[c] = safe[c].map(
             lambda v: (
                 "'" + v

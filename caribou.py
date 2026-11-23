@@ -3,18 +3,14 @@
 
 """CARIBOU — Streamlit entry point connecting preparation, exploration and simulation.
 
-Tab modules handle their own controls and calculations. This module passes
-validated mission tables between them; simulation and artifact results are
-managed by those modules in Streamlit's session state.
+Tab modules handle their own controls and calculations. This module passes validated mission tables
+between them; simulation and artifact results are managed by those modules in Streamlit's session
+state.
 """
 
-from hashlib import sha256
-from io import BytesIO
-
-import pandas as pd
 import streamlit as st
 
-from caribou_ui.data_preparation import render_simple, render_advanced
+from caribou_ui.preparation import render_simple, render_advanced
 from caribou_ui.visualizations import render
 from caribou_ui.simulation import render_simulation
 from caribou_ui.artifacts import render_artifacts
@@ -31,7 +27,8 @@ st.markdown(
     "**1. Prepare your data** — Choose **Simple preparation** if emissions are already "
     "calculated, or **Advanced preparation** to estimate them from travel locations and "
     "transportation modes. Already have a CARIBOU missions workbook? Go straight to **Simulation**.\n\n"
-    "**2. Explore** — Inspect your data, filter the charts and generate a dataset summary in **Visualization**.\n\n"
+    "**2. Explore** — Inspect your data, filter the charts and generate a dataset summary in "
+    "**Visualization**.\n\n"
     "**3. Simulate** — Set reduction targets and compare individual versus shared team budgets, "
     "using prepared data or an uploaded missions workbook.\n\n"
     "**4. Export** — Generate, preview and download figures and the summary table in **Artifacts**."
@@ -52,7 +49,8 @@ with st.expander("Keeping your results"):
 # Streamlit reruns this script on interaction and executes every tab body,
 # including hidden tabs. Prepare both sources before rendering downstream tabs.
 simple_tab, advanced_tab, viz_tab, simulation_tab, artifacts_tab = st.tabs(
-    ["1. Simple preparation", "1. Advanced preparation", "2. Visualization", "3. Simulation", "4. Artifacts"]
+    ["1. Simple preparation", "1. Advanced preparation", "2. Visualization", "3. Simulation",
+     "4. Artifacts"]
 )
 
 with simple_tab:
@@ -72,7 +70,8 @@ with viz_tab:
 
     if not available:
         st.info(
-            "Prepare valid missions in either Simple preparation or Advanced preparation to display visualizations."
+            "Prepare valid missions in either Simple preparation or Advanced preparation to display "
+            "visualizations."
         )
     else:
         mode = st.radio("Data source", list(available), horizontal=True)

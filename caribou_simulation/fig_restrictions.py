@@ -40,7 +40,7 @@ SCHEMA_VERSION = "1.0"
 AFFECTED_METRIC = "affected_traveler_years_percent"
 SEVERE_METRIC = "severely_affected_traveler_years_percent"
 
-# Shared target colors with fig_missions.py.
+# Shared target colors with fig_mission_preservation.py.
 TARGET_COLORS = {
     5: "#2676B8",
     10: "#159FAD",
@@ -116,9 +116,9 @@ def median_restrictions(report: dict, pooling: float) -> dict:
     """Summarize three exclusive restriction categories across rules.
 
     The two published CARIBOU metrics are the affected and severe shares.
-    To ensure that the displayed categories sum to 100%, the moderate share
-    is computed as median(affected) - median(severe). This is NOT necessarily
-    the median of each rule's moderate share.
+    To ensure that the displayed categories sum to 100%, the moderate share is computed as
+    median(affected) - median(severe). This is NOT necessarily the median of each rule's moderate
+    share.
     """
     key = pooling_key(pooling)
     affected = []
@@ -169,6 +169,7 @@ def load_distributions(results_dir: Path) -> tuple[dict, int, float]:
             level: median_restrictions(report, level)
             for level in POOLING_LEVELS
         }
+        del report
 
     if len(counts) != 1:
         raise ValueError("Reports contain different numbers of sampled rules")
