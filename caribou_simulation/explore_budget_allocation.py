@@ -36,13 +36,12 @@ from caribou_simulation.breakdowns import (
     DEFINITIONS, build_groups, restriction_breakdowns, interpolate_breakdowns, summarize_breakdowns,
 )
 
+from caribou_version import SIMULATION_SCHEMA_VERSION, VERSION
+
 
 # ==================================================================================================
 # Configuration
 # ==================================================================================================
-
-VERSION = "1.0.0"
-SCHEMA_VERSION = "1.0"
 
 DEFAULT_TARGETS = (5.0, 10.0, 15.0, 20.0)
 LAMBDA_GRID_INTERVALS = 10
@@ -431,7 +430,7 @@ def sample_rules(
 
 
 # ==================================================================================================
-# Fast numerical selection core (optional Numba acceleration)
+# Fast numerical selection core (Numba)
 # ==================================================================================================
 
 @njit(cache=True)
@@ -950,7 +949,7 @@ def create_report(
         by_lambda[key] = entry
 
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": SIMULATION_SCHEMA_VERSION,
         "breakdown_definitions": DEFINITIONS,
         "software_version": VERSION,
         "target_reduction_percent": target,

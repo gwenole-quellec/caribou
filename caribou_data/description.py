@@ -27,9 +27,8 @@ source, destination, bins = sys.argv[1:]
 frame = pd.read_excel(source, sheet_name="missions", dtype={"person_id": str, "team": str})
 output = Path(destination)
 rows, traveler_years = calculate_summary(frame)
-exclusions = {"total": 0, "no_team": 0, "mission_type": 0}
-(output / "table_dataset.md").write_text(markdown_table(rows, traveler_years, exclusions), encoding="utf-8")
-(output / "table_dataset.tex").write_text(latex_table(rows, traveler_years, exclusions), encoding="utf-8")
+(output / "table_dataset.md").write_text(markdown_table(rows, traveler_years), encoding="utf-8")
+(output / "table_dataset.tex").write_text(latex_table(rows, traveler_years), encoding="utf-8")
 plot_histogram(frame.emissions_kg_co2e.to_numpy(dtype=float), output, int(bins))
 """
 

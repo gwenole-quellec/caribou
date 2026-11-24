@@ -28,6 +28,8 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
+from caribou_version import SIMULATION_SCHEMA_VERSION
+
 
 # ==================================================================================================
 # Configuration
@@ -35,7 +37,6 @@ from matplotlib.patches import Circle
 
 TARGETS = (5, 10, 15, 20)
 POOLING_LEVELS = (0.0, 0.20, 0.50, 1.0)
-SCHEMA_VERSION = "1.0"
 
 AFFECTED_METRIC = "affected_traveler_years_percent"
 SEVERE_METRIC = "severely_affected_traveler_years_percent"
@@ -90,7 +91,7 @@ def load_report(results_dir: Path, target: int) -> dict:
     with path.open(encoding="utf-8") as stream:
         report = json.load(stream)
 
-    if report.get("schema_version") != SCHEMA_VERSION:
+    if report.get("schema_version") != SIMULATION_SCHEMA_VERSION:
         raise ValueError(f"Unsupported CARIBOU JSON schema in {path}")
     if not report.get("draws"):
         raise ValueError(f"No sampled decision rules in {path}")

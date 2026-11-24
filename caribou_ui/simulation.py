@@ -21,10 +21,11 @@ from caribou_simulation.explore_budget_allocation import (
 )
 from caribou_simulation.workflow import simulate_workbook
 from caribou_ui.reports import report_summary, result_directory, result_bytes
+from caribou_ui.session import replace_document, clear_simulation
 
 
 # ==================================================================================================
-# Utility functions
+# Shared preparation controls and validation
 # ==================================================================================================
 
 def number_list(text):
@@ -84,7 +85,10 @@ def render_simulation(available):
             "Simulation workbook (carbon_footprint.xlsx)",
             type=["xlsx"],
             key="simulation-upload",
+            on_change=replace_document, args=("simulation-workbook",),
         )
+        if st.session_state.pop("document-refresh-pending", False):
+            st.rerun()
         if upload is not None:
             raw = upload.getvalue()
             try:
@@ -268,7 +272,7 @@ def render_simulation(available):
     )
 
     if st.button("Run simulations", type="primary", key="simulation-run"):
-        st.session_state.pop("simulation-result", None)
+        clear_simulation()
         bar = st.progress(0, text="Validating missions and initializing the engine…")
         with st.container(border=True):
             st.caption("Now is the time to grab a coffee. And possibly another one.")
@@ -292,6 +296,7 @@ def render_simulation(available):
                                                  )
             bar.progress(100, text="Simulation complete — results ready.")
             st.session_state["simulation-result"] = (signature, reports, archive)
+            st.session_state["simulation-result-source"] = source
             # Refresh other tabs once so Artifacts sees the completed run.
             st.rerun()
         except Exception as exc:

@@ -154,7 +154,7 @@ def summarize(df: pd.DataFrame, period: str) -> dict:
     }
 
 
-def latex_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int]) -> str:
+def latex_table(rows: list[dict], traveler_years: int) -> str:
     """Standalone LaTeX table, usable via an input command."""
     years = [int(row["period"]) for row in rows if row["period"] != "Total"]
     years_str = (
@@ -162,8 +162,7 @@ def latex_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int
     )
     caption = (
         r"\textbf{Characteristics of the observed research travel.} "
-        rf"Eligible missions from {years_str}, excluding {exclusions['total']:,} "
-        r"missions assigned to excluded accounting categories. "
+        rf"Eligible missions from {years_str}. "
         r"The total row counts distinct travelers and research teams across the full period "
         r"(not sums of annual counts). "
         rf"There were {traveler_years:,} active traveler-years. "
@@ -201,10 +200,9 @@ def latex_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int
     return "\n".join(out)
 
 
-def markdown_table(rows: list[dict], traveler_years: int, exclusions: dict[str, int]) -> str:
+def markdown_table(rows: list[dict], traveler_years: int) -> str:
     lines = [
         "# CARIBOU — descriptive travel statistics", "",
-        f"Eligible missions after excluding {exclusions['total']:,} mission(s).", "",
         "| Year | Missions | Travelers | Teams | Emissions (t CO₂e) | "
         "Median mission emissions (IQR), kg CO₂e |",
         "| :--- | ---: | ---: | ---: | ---: | ---: |",
@@ -331,10 +329,10 @@ def main() -> None:
     args.table_dir.mkdir(parents=True, exist_ok=True)
     table_stem = args.table_dir / TABLE_FILENAME
     table_stem.with_suffix(".tex").write_text(
-        latex_table(rows, n_traveler_years, exclusions), encoding="utf-8"
+        latex_table(rows, n_traveler_years), encoding="utf-8"
     )
     table_stem.with_suffix(".md").write_text(
-        markdown_table(rows, n_traveler_years, exclusions), encoding="utf-8"
+        markdown_table(rows, n_traveler_years), encoding="utf-8"
     )
     plot_histogram(
         df["emissions_kg_co2e"].to_numpy(dtype=float),

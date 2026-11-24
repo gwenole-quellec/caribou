@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import PercentFormatter
 
+from caribou_version import SIMULATION_SCHEMA_VERSION
+
 
 # ==================================================================================================
 # Configuration
@@ -30,7 +32,6 @@ from matplotlib.ticker import PercentFormatter
 
 TARGETS = (5, 10, 15, 20)
 METRIC = "refused_missions_percent"
-SCHEMA_VERSION = "1.0"
 
 # Shared carbon-target palette for the four CARIBOU figures.
 TARGET_COLORS = {
@@ -80,7 +81,7 @@ def load_report(results_dir: Path, target: int) -> dict:
     with path.open(encoding="utf-8") as stream:
         report = json.load(stream)
 
-    if report.get("schema_version") != SCHEMA_VERSION:
+    if report.get("schema_version") != SIMULATION_SCHEMA_VERSION:
         raise ValueError(f"Unsupported CARIBOU JSON schema in {path}")
     if not report.get("draws"):
         raise ValueError(f"No sampled decision rules in {path}")

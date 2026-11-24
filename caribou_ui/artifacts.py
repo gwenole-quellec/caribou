@@ -9,7 +9,12 @@ import streamlit as st
 
 from caribou_simulation.artifacts import ARTIFACTS, generate_artifacts
 from caribou_ui.reports import report_summary, uploaded_reports
+from caribou_ui.session import replace_document, clear_artifacts
 
+
+# ==================================================================================================
+# Category display settings
+# ==================================================================================================
 
 def category_controls(reports):
     """Collect figure-only category visibility and display names."""
@@ -39,6 +44,10 @@ def category_controls(reports):
     return settings
 
 
+# ==================================================================================================
+# Artifact interface
+# ==================================================================================================
+
 @st.fragment
 def render_artifacts():
     """Use the last completed simulation or uploaded reports to build artifacts."""
@@ -67,12 +76,22 @@ def render_artifacts():
     )
     reports = saved[1] if saved and source == "Last completed simulation" else None
     if source == "Upload simulation results":
-        uploads = st.file_uploader(
-            "Simulation results (.zip or JSON reports)",
-            type=["zip", "json"],
-            accept_multiple_files=True,
-            key="artifact-upload",
+        upload_format = st.radio(
+            "Report format", ["Result ZIP", "JSON reports"], horizontal=True,
+            key="artifact-upload-format", on_change=replace_document, args=("artifact-format",),
         )
+        if upload_format == "Result ZIP":
+            upload = st.file_uploader(
+                "Simulation result ZIP", type=["zip"], key="artifact-upload",
+                on_change=replace_document, args=("artifact-reports",),
+            )
+            uploads = [upload] if upload is not None else []
+        else:
+            uploads = st.file_uploader(
+                "JSON reports from one simulation run", type=["json"], accept_multiple_files=True,
+                key="artifact-json-upload", on_change=replace_document, args=("artifact-reports",),
+            )
+            st.caption("Select one run's JSON files together. Clear the selection before loading another run.")
         if uploads:
             try:
                 reports = uploaded_reports(
@@ -148,7 +167,7 @@ def render_artifacts():
         disabled=not selected,
         key="artifact-generate",
     ):
-        st.session_state.pop("artifact-result", None)
+        clear_artifacts()
         bar = st.progress(0, text="Preparing artifact generation…")
         try:
 
@@ -163,6 +182,7 @@ def render_artifacts():
                 category_settings=category_settings
             )
             st.session_state["artifact-result"] = (signature, files, errors, archive)
+            st.session_state["artifact-result-source"] = source
         except Exception as exc:
             bar.empty()
             st.error(f"Unable to generate artifacts: {exc}")

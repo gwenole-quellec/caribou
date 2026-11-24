@@ -28,13 +28,14 @@ from pathlib import Path
 
 import numpy as np
 
+from caribou_version import SIMULATION_SCHEMA_VERSION
+
 
 # ==================================================================================================
 # Configuration
 # ==================================================================================================
 
 TARGETS = (5, 10, 15, 20)
-SCHEMA_VERSION = "1.0"
 OUTPUT_STEM = Path(__file__).stem
 
 # Keep column order aligned with the four outcomes defined in the manuscript.
@@ -48,13 +49,17 @@ METRICS = (
 
 
 # ==================================================================================================
-# Utility functions
+# Utility function
 # ==================================================================================================
 
 def pooling_key(value: float) -> str:
     """Return the string key used for pooling fractions in CARIBOU reports."""
     return format(float(value), ".10g")
 
+
+# ==================================================================================================
+# Load and summarize simulation data
+# ==================================================================================================
 
 def load_report(results_dir: Path, target: int, pooling: float) -> dict:
     path = results_dir / f"budget_allocation_{target}pct.json"
@@ -64,7 +69,7 @@ def load_report(results_dir: Path, target: int, pooling: float) -> dict:
     with path.open(encoding="utf-8") as stream:
         report = json.load(stream)
 
-    if report.get("schema_version") != SCHEMA_VERSION:
+    if report.get("schema_version") != SIMULATION_SCHEMA_VERSION:
         raise ValueError(f"Unsupported CARIBOU schema in {path}")
     if not report.get("draws"):
         raise ValueError(f"No per-rule records in {path}; rerun without --no-draws")

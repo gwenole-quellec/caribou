@@ -14,6 +14,8 @@ import sys
 from tempfile import TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from caribou_version import SIMULATION_SCHEMA_VERSION
+
 
 # ==================================================================================================
 # Constants
@@ -52,7 +54,7 @@ def read_reports(uploads):
             if not re.fullmatch(r"budget_allocation_\d+(?:p\d+)?pct\.json", filename):
                 raise ValueError(f"Unrecognized simulation report filename: {filename}")
             report = json.loads(content)
-            if report.get("schema_version") != "1.0" or not report.get("draws"):
+            if report.get("schema_version") != SIMULATION_SCHEMA_VERSION or not report.get("draws"):
                 raise ValueError(
                     "Artifact generation requires CARIBOU reports with per-rule results. "
                     "Rerun with Include per-rule results enabled."

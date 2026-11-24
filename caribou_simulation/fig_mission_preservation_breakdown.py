@@ -48,6 +48,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
+from caribou_version import SIMULATION_SCHEMA_VERSION
+
 
 # ==================================================================================================
 # Configuration
@@ -118,7 +120,7 @@ def load_effects(results_dir: Path) -> tuple[dict, int]:
     for target in TARGETS:
         path = results_dir / f"budget_allocation_{target}pct.json"
         report = json.loads(path.read_text(encoding="utf-8"))
-        if report["schema_version"] != "1.0" or report["target_reduction_percent"] != target:
+        if report["schema_version"] != SIMULATION_SCHEMA_VERSION or report["target_reduction_percent"] != target:
             raise ValueError(f"Unexpected report schema or target: {path}")
         if not report["draws"]:
             raise ValueError(f"Per-rule results are required: {path}")

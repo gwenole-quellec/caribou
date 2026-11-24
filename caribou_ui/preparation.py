@@ -13,6 +13,7 @@ import streamlit as st
 
 from caribou_data.emissions import FIELDS, MODE_ALIASES, calculate
 from caribou_data.workbooks import COLUMNS, OPTIONAL_COLUMNS, prepare, export_workbook
+from caribou_ui.session import replace_document
 
 
 # ==================================================================================================
@@ -41,7 +42,7 @@ FIELD_HELP = {
 
 
 # ==================================================================================================
-# Utility functions
+# Shared preparation controls and validation
 # ==================================================================================================
 
 def mission_controls(source, context, calculated_emissions=False):
@@ -177,7 +178,8 @@ def render_simple():
         "validated missions workbook or continue directly to Visualization and Simulation."
     )
     upload = st.file_uploader(
-        "Consolidated Excel workbook", type=["xlsx"], key="simple-upload"
+        "Consolidated Excel workbook", type=["xlsx"], key="simple-upload",
+        on_change=replace_document, args=("simple-workbook",),
     )
     if upload is None:
         st.info(
@@ -247,7 +249,8 @@ def render_advanced():
             "to reuse coordinates or work offline."
         )
     upload = st.file_uploader(
-        "Travel workbook (.xlsx)", type=["xlsx"], key="advanced-upload"
+        "Travel workbook (.xlsx)", type=["xlsx"], key="advanced-upload",
+        on_change=replace_document, args=("advanced-workbook",),
     )
     if upload is None:
         st.info(
@@ -348,7 +351,8 @@ def render_advanced():
             ]
 
     cache_upload = st.file_uploader(
-        "Geocoding cache (.json, optional)", type=["json"], key=prefix + "-cache"
+        "Geocoding cache (.json, optional)", type=["json"], key=prefix + "-cache",
+        on_change=replace_document, args=("advanced-cache",),
     )
     cache_bytes = cache_upload.getvalue() if cache_upload else None
     offline = st.checkbox(
