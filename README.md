@@ -41,6 +41,8 @@ python -m streamlit run caribou.py
 
 Open [http://localhost:8501](http://localhost:8501).
 
+**Command-line use only:** install the calculation dependencies with `python -m pip install -r requirements.txt`.
+
 1. **Prepare:** choose **Simple preparation** if emissions are already available, or **Advanced preparation** to estimate them from travel records. Download `carbon_footprint.xlsx`, ready for simulation.
 2. **Visualize:** inspect your prepared missions and generate a descriptive table and histogram. Chart filters do not change the simulation input.
 3. **Simulate:** use the prepared data or upload a missions workbook. Adjust the targets and sampling settings, then follow the progress bar.

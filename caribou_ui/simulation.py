@@ -25,7 +25,7 @@ from caribou_ui.session import replace_document, clear_simulation
 
 
 # ==================================================================================================
-# Shared preparation controls and validation
+# Utility function
 # ==================================================================================================
 
 def number_list(text):
@@ -33,35 +33,9 @@ def number_list(text):
     return [float(value) for value in re.split(r"[\s,;]+", text.strip()) if value]
 
 
-def render_breakdowns(reports):
-    """Show the two additive category indicators from simulation reports."""
-    rows = {"by_mission_type": [], "by_personnel_category": []}
-    for name, content in reports.items():
-        report = report_summary(name, content)
-        for pooling, summary in report["summary_by_lambda"].items():
-            for section, categories in summary["breakdowns"].items():
-                for category, values in categories.items():
-                    rate = values["refused_missions_percent"]
-                    paired = values.get("paired_difference_from_lambda_0_percentage_points", {})
-                    rows[section].append({
-                        "Reduction target (%)": report["target_reduction_percent"],
-                        "Pooling fraction": float(pooling),
-                        "Category": category,
-                        "Requested missions": values["requested_missions"],
-                        "Refused missions (%) — median": rate["median"],
-                        "p05": rate["p05"], "p95": rate["p95"],
-                        "Paired change from no pooling (pp) — median": paired.get("median"),
-                    })
-    for section, title in [("by_mission_type", "Refused missions by mission purpose"),
-                           ("by_personnel_category", "Refused missions by personnel category")]:
-        if rows[section]:
-            with st.expander(title):
-                st.caption(
-                    "Rates are within each category, using eligible missions. "
-                    "Purpose groups can overlap; missing labels are Not specified. "
-                    "Ranges describe sampled rules, not confidence intervals.")
-                st.dataframe(rows[section], use_container_width=True)
-
+# ==================================================================================================
+# Simulation interface
+# ==================================================================================================
 
 @st.fragment
 def render_simulation(available):
@@ -319,7 +293,6 @@ def render_simulation(available):
         "Medians and ranges describe sensitivity across hypothetical rules, not confidence "
         "intervals or predictions."
     )
-    render_breakdowns(reports)
     st.download_button(
         "Download all simulation results (.zip)",
         lambda: result_bytes(archive),

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Copyright (c) 2026 CARIBOU contributors
 
-"""Invalidate document-derived state when an upload is replaced or removed."""
+"""CARIBOU — Invalidate document-derived state when an upload is replaced or removed."""
 
 import streamlit as st
 
