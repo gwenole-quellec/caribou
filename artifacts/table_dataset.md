@@ -1,7 +1,5 @@
 # CARIBOU — descriptive travel statistics
 
-Eligible missions after excluding 0 mission(s).
-
 | Year | Missions | Travelers | Teams | Emissions (t CO₂e) | Median mission emissions (IQR), kg CO₂e |
 | :--- | ---: | ---: | ---: | ---: | ---: |
 | 2022 | 158 | 60 | 4 | 72.2 | 47.4 (4.0–603.2) |
